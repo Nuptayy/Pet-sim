@@ -1,0 +1,52 @@
+[gd_scene load_steps=3 format=3 uid="uid://cbs3ifu4dssxl"]
+
+[ext_resource type="Script" uid="uid://b4tvw6giaaimh" path="res://Scripts/main_game.gd" id="1_b2ywn"]
+[ext_resource type="PackedScene" uid="uid://qa3lkyblum14" path="res://Scenes/HatchScene.tscn" id="2_ev27r"]
+
+[node name="Main_game" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_b2ywn")
+
+[node name="UI root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="InventoryStack" type="HBoxContainer" parent="UI root"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Commons" type="VBoxContainer" parent="UI root/InventoryStack"]
+layout_mode = 2
+
+[node name="Rares" type="VBoxContainer" parent="UI root/InventoryStack"]
+layout_mode = 2
+
+[node name="Legendaries" type="VBoxContainer" parent="UI root/InventoryStack"]
+layout_mode = 2
+
+[node name="Secrets" type="VBoxContainer" parent="UI root/InventoryStack"]
+layout_mode = 2
+
+[node name="Mythics" type="VBoxContainer" parent="UI root/InventoryStack"]
+layout_mode = 2
+
+[node name="ClearInventoryButton" type="Button" parent="UI root"]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+handle_input_locally = false
+size = Vector2i(1152, 648)
+render_target_update_mode = 4
+
+[node name="HatchScene" parent="SubViewportContainer/SubViewport" instance=ExtResource("2_ev27r")]
