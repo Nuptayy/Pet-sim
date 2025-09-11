@@ -23,23 +23,25 @@ extends Control
 	{"name": "Common",      "color": Color.WHITE,          "order": 0},
 	{"name": "Uncommon",    "color": Color.GREEN,          "order": 1},
 	{"name": "Rare",        "color": Color.BLUE,           "order": 2},
-	{"name": "Legendary",   "color": Color.ORANGE,         "order": 3},
-	{"name": "Secret",      "color": Color.PURPLE,         "order": 4},
+	{"name": "Epic",        "color": Color.PURPLE,         "order": 3},
+	{"name": "Legendary",   "color": Color.ORANGE,         "order": 4},
 	{"name": "Mythic",      "color": Color.YELLOW,         "order": 5},
 	{"name": "Divine",      "color": Color.SKY_BLUE,       "order": 6},
-	{"name": "Insane",      "color": Color.DARK_RED,       "order": 7},
-	{"name": "WTF",         "color": Color.GOLD,           "order": 8},
-	{"name": "GodLike",     "color": Color.REBECCA_PURPLE, "order": 9},
-	{"name": "Impossible",  "color": Color.LIGHT_YELLOW,   "order": 10}
+	{"name": "Godly",       "color": Color.REBECCA_PURPLE, "order": 7},
+	{"name": "Secret",      "color": Color.MEDIUM_PURPLE,  "order": 8},
+	{"name": "Insane",      "color": Color.DARK_RED,       "order": 9},
+	{"name": "WTF",         "color": Color.GOLD,           "order": 10},
+	{"name": "Impossible",  "color": Color.BLACK,          "order": 11},
+	{"name": "???",         "color": Color.WHITE,          "order": 12}
 ]
 
 # 🔹 Définit chaque pet individuel, sa chance, son modèle et sa rareté.
 @export var pets: Array[Dictionary] = [
 	{"name":"Cat",       "chance": 50.0,    "model": preload("res://Assets/Pets/cat/Untitled (1).fbx"),  "rarity": "Common"},
 	{"name":"Rabbit",    "chance": 30.0,    "model": preload("res://Assets/Pets/Rabbit/Untitled.glb"),   "rarity": "Uncommon"},
-	{"name":"Bee",       "chance": 15.0,    "model": preload("res://Assets/Pets/bee/BeePets.fbx"),       "rarity": "Rare"},
-	{"name":"Test1",     "chance": 4.9989,  "model": preload("res://Assets/Egg.glb"),                    "rarity": "Legendary"},
-	{"name":"Test2",     "chance": 0.001,   "model": preload("res://Assets/Egg.glb"),                    "rarity": "Secret"},
+	{"name":"Bee",       "chance": 15.0,    "model": preload("res://Assets/Pets/bee/BeePets.fbx"),       "rarity": "Epic"},
+	{"name":"Test1",     "chance": 4.9989,  "model": preload("res://Assets/Egg.glb"),                    "rarity": "Rare"},
+	{"name":"Test2",     "chance": 0.001,   "model": preload("res://Assets/Egg.glb"),                    "rarity": "Legendary"},
 	{"name":"Test3",     "chance": 0.0001,  "model": preload("res://Assets/Egg.glb"),                    "rarity": "Mythic"}
 ]
 
