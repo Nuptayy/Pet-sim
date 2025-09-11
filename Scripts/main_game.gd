@@ -43,7 +43,7 @@ extends Control
 	{"name":"Test3",     "chance": 0.0001,  "model": preload("res://Assets/Egg.glb"),                    "rarity": "Mythic"}
 ]
 
-# 🔹 Définit les différents "types" de pet, leurs chances réelles, et leur ordre d'affichage.
+# 🔹 Définit les différents types de pet, leurs chances, et leur ordre d'affichage.
 @export var pet_types: Array[Dictionary] = [
 	{"name": "Classic", "chance": 88.89,"effect_type": "none",   "value": null,       "order": 0},
 	{"name": "Golden",  "chance": 10.0, "effect_type": "color",  "value": Color.GOLD, "order": 1},
