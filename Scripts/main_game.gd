@@ -43,6 +43,14 @@ extends Control
 	{"name":"Test3",     "chance": 0.0001,  "model": preload("res://Assets/Egg.glb"),                    "rarity": "Mythic"}
 ]
 
+# 🔹 Définit les différents "types" de pet, leurs chances réelles, et leur ordre d'affichage.
+@export var pet_types: Array[Dictionary] = [
+	{"name": "Classic", "chance": 88.89,"effect_type": "none",   "value": null,       "order": 0},
+	{"name": "Golden",  "chance": 10.0, "effect_type": "color",  "value": Color.GOLD, "order": 1},
+	{"name": "Rainbow", "chance": 1.0,  "effect_type": "shader", "value": "res://Shaders/rainbow_effect.gdshader", "order": 2},
+	{"name": "Glitch",  "chance": 0.1,  "effect_type": "shader", "value": "res://Shaders/glitch_effect.gdshader",  "order": 3},
+	{"name": "Virus",   "chance": 0.01, "effect_type": "shader", "value": "res://Shaders/virus_effect.gdshader",   "order": 4}
+]
 
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 # 🔹 VARIABLES INTERNES DU SYSTÈME
@@ -60,7 +68,7 @@ var rarity_data_map = {}
 var active_hatch_instances = []
 
 @onready var ui_root: Control = $"UI root"
-@onready var inventory_stack: HBoxContainer = $"UI root/InventoryStack"
+@onready var inventory_stack: VBoxContainer = $"UI root/InventoryStack"
 @onready var clear_button: Button = $"UI root/ClearInventoryButton"
 @onready var viewport_container: SubViewportContainer = $SubViewportContainer
 @onready var camera: Camera3D = $SubViewportContainer/SubViewport/HatchScene/Camera3D
@@ -72,6 +80,7 @@ var active_hatch_instances = []
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # 🔹 Initialisation du jeu au lancement
+# 🔹 Initialisation du jeu au lancement
 func _ready():
 	var crypto = Crypto.new()
 	var random_bytes = crypto.generate_random_bytes(8)
@@ -82,7 +91,7 @@ func _ready():
 	clear_button.pressed.connect(_on_ClearInventoryButton_pressed)
 	
 	set_state(GameState.INVENTORY)
-	print("🎮 Hatcher prêt avec un inventaire dynamique !")
+	print("🎮 Hatcher prêt avec un inventaire basé sur les pets !")
 
 # 🔹 Gère les entrées du joueur à chaque frame
 func _input(event):
@@ -158,15 +167,22 @@ func auto_hatch_loop() -> void:
 # 🔹 CALCULS DE CHANCE (LUCK)
 # ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-# 🔹 Tire UN pet en utilisant une table de chances pré-calculée
+# 🔹 Tire UN pet ET son type, en utilisant une table de chances pré-calculée
 func hatch_pet(pets_to_roll: Array) -> Dictionary:
 	var roll = rng.randf_range(0.0, 100.0)
 	var cumulative = 0.0
 	for pet_data in pets_to_roll:
 		cumulative += pet_data["chance"]
 		if roll <= cumulative:
-			return pet_data
-	return pets[0]
+			# Une fois le pet tiré, on tire son type.
+			var final_pet_data = pet_data.duplicate()
+			final_pet_data["type"] = roll_pet_type()
+			return final_pet_data
+			
+	# Sécurité : en cas d'erreur, retourne le premier pet avec le type Classic.
+	var fallback_pet = pets[0].duplicate()
+	fallback_pet["type"] = pet_types.back() # .back() récupère le dernier élément (Classic)
+	return fallback_pet
 
 # 🔹 Calcule une table de chances temporaire, modifiée par le paramètre 'Luck'
 func get_pets_with_luck() -> Array:
@@ -213,27 +229,34 @@ func get_pets_with_luck() -> Array:
 # 🔹 Joue la cinématique de balancement et de révélation pour tous les œufs
 func play_simultaneous_hatch_animation():
 	if active_hatch_instances.is_empty(): return
+	
 	var safe_speed = max(Speed, 1.0)
 	var anim_duration = 1.0 / safe_speed
 	var elapsed_time = 0.0
 	var swing_amount = 0.3
 	var swing_speed = 8.0
+	
 	while elapsed_time < anim_duration:
 		elapsed_time += get_process_delta_time()
 		var angle = sin(elapsed_time * swing_speed) * swing_amount
 		for instance in active_hatch_instances:
 			instance.node.rotation.y = angle
 		await get_tree().process_frame
+
 	for instance in active_hatch_instances:
 		var egg_model = instance.node.find_child("Egg", true, false)
 		if egg_model:
 			egg_model.visible = false
+
 		var pet_data = instance.pet_data
 		if pet_data and pet_data.model:
 			var pet_instance = pet_data.model.instantiate()
 			instance.node.add_child(pet_instance)
 			pet_instance.position = Vector3.ZERO
 			pet_instance.scale = Vector3.ONE * 0.5
+			# Applique l'effet visuel (Golden, Rainbow, etc.)
+			apply_visual_effect(pet_instance, pet_data["type"])
+
 	await get_tree().create_timer(0.5 / safe_speed).timeout
 
 # 🔹 Calcule et place les instances d'œufs dans une grille centrée à l'écran
@@ -286,77 +309,111 @@ func place_eggs_on_grid(pets_data: Array):
 
 # 🔹 Construit l'interface de l'inventaire et les données associées au démarrage
 func build_dynamic_inventory():
-	for child in inventory_stack.get_children():
-		child.queue_free()
+	# 1. Prépare les données de base.
 	inventory_count.clear()
 	rarity_data_map.clear()
-	
 	rarities.sort_custom(func(a, b): return a["order"] < b["order"])
-	
 	for rarity_info in rarities:
-		var rarity_name = rarity_info["name"]
+		rarity_data_map[rarity_info["name"]] = {"color": rarity_info["color"]}
 		
-		var new_container = VBoxContainer.new()
-		new_container.name = rarity_name
-		inventory_stack.add_child(new_container)
-		
-		rarity_data_map[rarity_name] = {
-			"color": rarity_info["color"],
-			"container_node": new_container
-		}
+	# 2. Vide les anciens nœuds.
+	for child in inventory_stack.get_children():
+		child.queue_free()
+	
+	# 3. Calcule la largeur minimale nécessaire pour chaque colonne.
+	var min_col_width = calculate_minimum_column_width()
 
+	# 4. Crée une ligne (HBoxContainer) pour les totaux.
+	var totals_row = HBoxContainer.new()
+	totals_row.name = "TotalsRow"
+	inventory_stack.add_child(totals_row)
 	for pet_info in pets:
-		inventory_count[pet_info["name"]] = 0
+		var pet_name = pet_info["name"]
+		var total_label = Label.new()
+		total_label.name = "%s_TotalLabel" % pet_name
+		total_label.custom_minimum_size.x = min_col_width
+		total_label.visible = false
+		var pet_rarity_info = rarity_data_map.get(pet_info["rarity"])
+		if pet_rarity_info:
+			total_label.add_theme_color_override("font_color", pet_rarity_info["color"])
+		totals_row.add_child(total_label)
+		
+	# 5. Crée une ligne (HBoxContainer) pour chaque type de pet.
+	var display_sorted_types = pet_types.duplicate(true)
+	display_sorted_types.sort_custom(func(a, b): return a["order"] < b["order"])
+	
+	for type_info in display_sorted_types:
+		var type_name = type_info["name"]
+		var type_row = HBoxContainer.new()
+		type_row.name = "%sRow" % type_name
+		inventory_stack.add_child(type_row)
+		for pet_info in pets:
+			var pet_name = pet_info["name"]
+			var type_label = Label.new()
+			type_label.name = "%s_%sLabel" % [pet_name, type_name]
+			type_label.custom_minimum_size.x = min_col_width
+			type_label.visible = false
+			type_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+			type_row.add_child(type_label)
+			
+	# 6. Initialise les compteurs à zéro.
+	for pet_info in pets:
+		var pet_name = pet_info["name"]
+		inventory_count[pet_name] = {"total": 0}
+		for type_info in pet_types:
+			inventory_count[pet_name][type_info["name"]] = 0
+			
+	# 5. Initialise les compteurs à zéro.
+	for pet_info in pets:
+		var pet_name = pet_info["name"]
+		inventory_count[pet_name] = {"total": 0}
+		for type_info in pet_types:
+			inventory_count[pet_name][type_info["name"]] = 0
 
 # 🔹 Ajoute un pet à l'inventaire visuel ou met à jour son compteur
 func add_pet_to_inventory(pet_data: Dictionary):
 	var pet_name = pet_data["name"]
-	var pet_rarity = pet_data["rarity"]
+	var type_name = pet_data["type"]["name"]
 	
-	# 1. Incrémente le compteur pour ce pet spécifique.
-	if inventory_count.has(pet_name):
-		inventory_count[pet_name] += 1
-	else:
-		# Sécurité au cas où le pet n'aurait pas été initialisé.
-		inventory_count[pet_name] = 1
+	if not inventory_count.has(pet_name): return
 	
-	# 2. Récupère les données de la rareté du pet (couleur, conteneur).
-	if not rarity_data_map.has(pet_rarity):
-		printerr("Rareté '%s' non trouvée pour le pet '%s'. Vérifiez la configuration." % [pet_rarity, pet_name])
-		return
+	# 1. Met à jour les compteurs.
+	inventory_count[pet_name]["total"] += 1
+	inventory_count[pet_name][type_name] += 1
 	
-	var rarity_info = rarity_data_map[pet_rarity]
-	var container: VBoxContainer = rarity_info["container_node"]
-	var color: Color = rarity_info["color"]
-	
-	# 3. Prépare le texte à afficher.
-	var count = inventory_count[pet_name]
-	var text_to_display = "%s x%d" % [pet_name, count]
-	
-	# 4. Cherche si un label pour ce pet existe déjà dans le bon conteneur.
-	# La correction clé est ici : le troisième paramètre 'false' rend la recherche plus fiable pour les nœuds créés dynamiquement.
-	var label_node: Label = container.find_child(pet_name, false, false)
-	
-	if label_node:
-		# Le label existe, on met juste à jour son texte.
-		label_node.text = text_to_display
-	else:
-		# Le label n'existe pas, on le crée et on l'ajoute.
-		var new_label = Label.new()
-		new_label.name = pet_name # Important pour le retrouver la prochaine fois.
-		new_label.text = text_to_display
-		new_label.add_theme_color_override("font_color", color)
-		container.add_child(new_label)
+	# 2. Met à jour le label du total dans la bonne ligne.
+	var totals_row: HBoxContainer = inventory_stack.find_child("TotalsRow", false, false)
+	if totals_row:
+		var total_label: Label = totals_row.find_child("%s_TotalLabel" % pet_name, false, false)
+		if total_label:
+			total_label.text = "%s x%d" % [pet_name, inventory_count[pet_name]["total"]]
+			total_label.visible = true
+
+	# 3. Met à jour le label du type dans la bonne ligne.
+	var type_row: HBoxContainer = inventory_stack.find_child("%sRow" % type_name, false, false)
+	if type_row:
+		var type_label: Label = type_row.find_child("%s_%sLabel" % [pet_name, type_name], false, false)
+		if type_label:
+			type_label.text = "%s: %d" % [type_name, inventory_count[pet_name][type_name]]
+			type_label.visible = true
 
 # 🔹 Réinitialise les compteurs de pets et vide l'interface de l'inventaire
 func _on_ClearInventoryButton_pressed():
 	for pet_name in inventory_count:
-		inventory_count[pet_name] = 0
+		inventory_count[pet_name]["total"] = 0
+		var totals_row: HBoxContainer = inventory_stack.find_child("TotalsRow", false, false)
+		if totals_row:
+			var total_label: Label = totals_row.find_child("%s_TotalLabel" % pet_name, false, false)
+			if total_label:
+				total_label.visible = false
 		
-	for rarity_name in rarity_data_map:
-		var container = rarity_data_map[rarity_name]["container_node"]
-		for child in container.get_children():
-			child.queue_free()
+		for type_info in pet_types:
+			inventory_count[pet_name][type_info["name"]] = 0
+			var type_row: HBoxContainer = inventory_stack.find_child("%sRow" % type_info["name"], false, false)
+			if type_row:
+				var type_label: Label = type_row.find_child("%s_%sLabel" % [pet_name, type_info["name"]], false, false)
+				if type_label:
+					type_label.visible = false
 
 # 🔹 Gère le changement d'état visuel du jeu (HATCHING vs INVENTORY)
 func set_state(new_state: GameState):
@@ -405,3 +462,94 @@ func get_3d_world_size_from_viewport(size_in_pixels: Vector2) -> Vector2:
 	if pos0_3d != null and pos_size_3d != null:
 		return Vector2(abs(pos_size_3d.x - pos0_3d.x), abs(pos_size_3d.y - pos0_3d.y))
 	return Vector2.ONE
+
+# 🔹 Calcule la largeur de colonne minimale nécessaire pour éviter que le texte ne soit coupé
+func calculate_minimum_column_width() -> float:
+	var temp_label = Label.new()
+	var max_width = 0.0
+	
+	# Teste le texte le plus long possible pour les totaux et les types
+	var longest_pet_name = ""
+	for pet in pets:
+		if pet["name"].length() > longest_pet_name.length():
+			longest_pet_name = pet["name"]
+			
+	var longest_type_name = ""
+	for type in pet_types:
+		if type["name"].length() > longest_type_name.length():
+			longest_type_name = type["name"]
+			
+	# Simule le texte le plus long et mesure sa largeur
+	temp_label.text = "%s x9999" % longest_pet_name
+	max_width = max(max_width, temp_label.get_minimum_size().x)
+	
+	temp_label.text = "%s: 9999" % longest_type_name
+	max_width = max(max_width, temp_label.get_minimum_size().x)
+	
+	temp_label.queue_free()
+	
+	# Ajoute un petit padding pour être sûr
+	return max_width + 10 
+
+
+# 🔹 Tire un "type" de pet en utilisant un système de probabilités cumulées
+func roll_pet_type() -> Dictionary:
+	# On fait UN SEUL tirage de dé, un nombre entre 0.0 et 100.0.
+	var roll = rng.randf_range(0.0, 100.0)
+	var cumulative = 0.0
+	
+	# On parcourt la liste des types
+	for type_data in pet_types:
+		cumulative += type_data["chance"]
+		# On vérifie si notre lancer de dé tombe dans la tranche de ce type
+		if roll <= cumulative:
+			return type_data # On a trouvé notre type, on le retourne.
+	
+	# Sécurité : si la somme des chances n'est pas 100, on retourne le premier type de la liste.
+	return pet_types[0]
+
+# 🔹 Applique un effet visuel à un modèle de pet en fonction de son type
+func apply_visual_effect(pet_node: Node3D, type_info: Dictionary):
+	var mesh_instance = find_mesh_recursively(pet_node)
+	if not mesh_instance:
+		printerr("Impossible de trouver un MeshInstance3D pour appliquer l'effet visuel sur ", pet_node.name)
+		return
+		
+	var effect_type = type_info["effect_type"]
+	var effect_value = type_info["value"]
+	
+	match effect_type:
+		"none":
+			pass
+		"color":
+			# Parcourt toutes les surfaces du mesh pour appliquer la couleur.
+			for i in range(mesh_instance.get_surface_override_material_count()):
+				var original_material = mesh_instance.get_surface_override_material(i)
+				
+				# Duplique le matériau pour ne pas affecter d'autres instances.
+				var new_material = original_material.duplicate() if original_material else StandardMaterial3D.new()
+				
+				if new_material is StandardMaterial3D:
+					new_material.albedo_color = effect_value
+					# Important : on applique le nouveau matériau dupliqué.
+					mesh_instance.set_surface_override_material(i, new_material)
+		"shader":
+			var shader = load(effect_value) as Shader
+			if shader:
+				var shader_material = ShaderMaterial.new()
+				shader_material.shader = shader
+				# Applique le shader à toutes les surfaces.
+				for i in range(mesh_instance.get_surface_override_material_count()):
+					mesh_instance.set_surface_override_material(i, shader_material)
+			else:
+				printerr("Impossible de charger le shader depuis le chemin: ", effect_value)
+
+# 🔹 Fonction utilitaire pour trouver la première instance de MeshInstance3D dans un nœud et ses enfants
+func find_mesh_recursively(node: Node) -> MeshInstance3D:
+	if node is MeshInstance3D:
+		return node
+	for child in node.get_children():
+		var mesh = find_mesh_recursively(child)
+		if mesh:
+			return mesh
+	return null

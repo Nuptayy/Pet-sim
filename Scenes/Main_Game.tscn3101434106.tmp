@@ -14,7 +14,7 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="InventoryStack" type="VBoxContainer" parent="UI root"]
+[node name="InventoryStack" type="HBoxContainer" parent="UI root"]
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 40.0
