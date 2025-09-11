@@ -1,62 +1,347 @@
+# Ce script gère toute la logique du jeu : éclosion, inventaire, animations et paramètres.
 extends Control
 
-# 🔹 Constante pour le préfabriqué de l'œuf
-const EGG_SCENE = preload("res://Scenes/Egg.tscn")
 
-# 🔹 Paramètres
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# 🔹 CONFIGURATION DU JEU (MODIFIABLE DANS L'INSPECTEUR)
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# --- Groupe: Éclosion ---
 @export var NumberOfEggMax = 12
-@export var Luck = 1
-@export var Speed = 1
 @export var AutoHatch = false
-@export var IsHatching = false
 
-@export var global_egg_scale_multiplier = 0.5 # Changez cette valeur (ex: 1.0, 0.7, 1.2) pour ajuster la taille
+# --- Groupe: Ressenti du Jeu ---
+@export var Speed = 1.0 # Multiplicateur de vitesse des animations. 1.0 = normal.
+@export var global_egg_scale_multiplier = 0.5 # Ajuste la taille globale des œufs.
 
-# 🔹 RNG sécurisé (anti-triche)
-var rng = RandomNumberGenerator.new()
+# --- Groupe: Équilibrage ---
+@export var Luck = 1.0 # Multiplicateur de chance pour les pets rares. 1.0 = normal.
+@export var low_tier_rarities: Array[String] = ["Common"] # Raretés qui perdent de la chance.
 
-# 🔹 Liste de pets avec leur chance (%)
-@export var pets = [
-	{"name":"Common", "chance":80.0, "model": preload("res://Assets/Pets/cat/Untitled (1).fbx")},
-	{"name":"Rare", "chance":15.0, "model": preload("res://Assets/Pets/bee/BeePets.fbx")},
-	{"name":"Legendary", "chance":4.9989, "model": preload("res://Assets/Egg.glb")},
-	{"name":"Secret", "chance":0.001, "model": preload("res://Assets/Egg.glb")},
-	{"name":"Mythic", "chance":0.0001, "model": preload("res://Assets/Egg.glb")}
+# 🔹 Définit les propriétés de chaque rareté (couleur, ordre d'affichage).
+@export var rarities: Array[Dictionary] = [
+	{"name": "Common",    "color": Color.WHITE,  "order": 0},
+	{"name": "Uncommon",  "color": Color.GREEN,  "order": 1},
+	{"name": "Rare",      "color": Color.BLUE,   "order": 2},
+	{"name": "Legendary", "color": Color.ORANGE, "order": 3},
+	{"name": "Secret",    "color": Color.PURPLE, "order": 4},
+	{"name": "Mythic",    "color": Color.YELLOW, "order": 5}
 ]
 
-# 🔹 Inventaire avec compteur
-var inventory_count = { "Common": 0, "Rare": 0, "Legendary": 0, "Secret": 0, "Mythic": 0 }
+# 🔹 Définit chaque pet individuel, sa chance, son modèle et sa rareté.
+@export var pets: Array[Dictionary] = [
+	{"name":"Cat",       "chance": 80.0,    "model": preload("res://Assets/Pets/cat/Untitled (1).fbx"),   "rarity": "Common"},
+	{"name":"Bee",       "chance": 15.0,    "model": preload("res://Assets/Pets/bee/BeePets.fbx"),      "rarity": "Rare"},
+	{"name":"Rabbit",    "chance": 4.9989,  "model": preload("res://Assets/Pets/Rabbit/Untitled.glb"), "rarity": "Legendary"},
+	{"name":"Test1",     "chance": 0.001,   "model": preload("res://Assets/Egg.glb"),                  "rarity": "Secret"},
+	{"name":"Test2",     "chance": 0.0001,  "model": preload("res://Assets/Egg.glb"),                  "rarity": "Mythic"}
+]
 
-# Machine à états simplifiée
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# 🔹 VARIABLES INTERNES DU SYSTÈME
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+const EGG_SCENE = preload("res://Scenes/Egg.tscn")
+
+var IsHatching = false
 enum GameState { HATCHING, INVENTORY }
 var current_state = GameState.INVENTORY
+var rng = RandomNumberGenerator.new()
 
-# 🔹 Références UI et 3D
-@onready var ui_root = $"UI root"
-@onready var common_box = $"UI root/InventoryStack/Commons"
-@onready var rare_box = $"UI root/InventoryStack/Rares"
-@onready var legendary_box = $"UI root/InventoryStack/Legendaries"
-@onready var secret_box = $"UI root/InventoryStack/Secrets"
-@onready var mythic_box = $"UI root/InventoryStack/Mythics"
-@onready var clear_button = $"UI root/ClearInventoryButton"
-@onready var viewport_container = $SubViewportContainer
-@onready var camera = $SubViewportContainer/SubViewport/HatchScene/Camera3D
-@onready var egg_grid_container = $SubViewportContainer/SubViewport/HatchScene/EggGridContainer
-
-# Pour garder la trace des œufs et pets actuellement à l'écran
+var inventory_count = {}
+var rarity_data_map = {}
 var active_hatch_instances = []
 
+@onready var ui_root: Control = $"UI root"
+@onready var inventory_stack: HBoxContainer = $"UI root/InventoryStack"
+@onready var clear_button: Button = $"UI root/ClearInventoryButton"
+@onready var viewport_container: SubViewportContainer = $SubViewportContainer
+@onready var camera: Camera3D = $SubViewportContainer/SubViewport/HatchScene/Camera3D
+@onready var egg_grid_container: Node3D = $SubViewportContainer/SubViewport/HatchScene/EggGridContainer
+
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# 🔹 FONCTIONS PRINCIPALES DE GODOT (_ready, _input)
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# 🔹 Initialisation du jeu au lancement
 func _ready():
-	# Seed anti-triche
-	rng.seed = Time.get_ticks_msec() + get_instance_id()
+	var crypto = Crypto.new()
+	var random_bytes = crypto.generate_random_bytes(8)
+	rng.seed = bytes_to_int(random_bytes)
+	
+	build_dynamic_inventory()
+	
 	clear_button.pressed.connect(_on_ClearInventoryButton_pressed)
 	
-	# MODIFIÉ : On commence toujours dans l'inventaire
 	set_state(GameState.INVENTORY)
-	
-	print("🎮 Hatcher prêt !")
+	print("🎮 Hatcher prêt avec un inventaire dynamique !")
 
-# Gestionnaire d'états : s'occupe de cacher/montrer les bonnes vues
+# 🔹 Gère les entrées du joueur à chaque frame
+func _input(event):
+	if event.is_action_pressed("toggle_auto"):
+		if AutoHatch:
+			AutoHatch = false
+			print("🛑 Auto-Hatch désactivé par l'utilisateur.")
+			return
+			
+	if current_state == GameState.INVENTORY and not IsHatching:
+		if event.is_action_pressed("hatch_one"):
+			hatch_eggs(1)
+		elif event.is_action_pressed("hatch_max"):
+			hatch_eggs(NumberOfEggMax)
+		elif event.is_action_pressed("toggle_auto"):
+			AutoHatch = true
+			print("🚀 Auto-Hatch activé")
+			auto_hatch_loop()
+
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# 🔹 LOGIQUE D'ÉCLOSION (HATCHING)
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# 🔹 Fonction principale qui orchestre l'ouverture d'un certain nombre d'œufs
+func hatch_eggs(count: int) -> void:
+	if IsHatching: return
+	IsHatching = true
+	
+	set_state(GameState.HATCHING)
+	await get_tree().process_frame
+	
+	for instance in active_hatch_instances:
+		if is_instance_valid(instance.node):
+			instance.node.queue_free()
+	active_hatch_instances.clear()
+	
+	var lucky_pets_table = get_pets_with_luck()
+	var pets_to_hatch = []
+	for i in range(count):
+		pets_to_hatch.append(hatch_pet(lucky_pets_table))
+ 
+	place_eggs_on_grid(pets_to_hatch)
+	await play_simultaneous_hatch_animation()
+	
+	for pet_data in pets_to_hatch:
+		add_pet_to_inventory(pet_data)
+	
+	var safe_speed = max(Speed, 1.0)
+	await get_tree().create_timer(1.5 / safe_speed).timeout
+	
+	for instance in active_hatch_instances:
+		if is_instance_valid(instance.node):
+			instance.node.queue_free()
+	active_hatch_instances.clear()
+	
+	IsHatching = false
+	if not AutoHatch:
+		set_state(GameState.INVENTORY)
+
+# 🔹 Boucle pour l'éclosion automatique
+func auto_hatch_loop() -> void:
+	while AutoHatch:
+		if not IsHatching:
+			await hatch_eggs(NumberOfEggMax)
+		else:
+			await get_tree().process_frame
+	if current_state == GameState.HATCHING:
+		set_state(GameState.INVENTORY)
+
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# 🔹 CALCULS DE CHANCE (LUCK)
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# 🔹 Tire UN pet en utilisant une table de chances pré-calculée
+func hatch_pet(pets_to_roll: Array) -> Dictionary:
+	var roll = rng.randf_range(0.0, 100.0)
+	var cumulative = 0.0
+	for pet_data in pets_to_roll:
+		cumulative += pet_data["chance"]
+		if roll <= cumulative:
+			return pet_data
+	return pets[0]
+
+# 🔹 Calcule une table de chances temporaire, modifiée par le paramètre 'Luck'
+func get_pets_with_luck() -> Array:
+	var pets_copy = pets.duplicate(true)
+	var low_tiers = []
+	var high_tiers = []
+	for pet in pets_copy:
+		if pet["rarity"] in low_tier_rarities:
+			low_tiers.append(pet)
+		else:
+			high_tiers.append(pet)
+	var total_chance_boost = 0.0
+	for pet in high_tiers:
+		var original_chance = pet["chance"]
+		var new_chance = original_chance * max(Luck, 1.0)
+		var boost = new_chance - original_chance
+		total_chance_boost += boost
+		pet["chance"] = new_chance
+	var low_tier_chance_pool = 0.0
+	for pet in low_tiers:
+		low_tier_chance_pool += pet["chance"]
+	if low_tier_chance_pool > 0.001:
+		for pet in low_tiers:
+			var proportion_of_pool = pet["chance"] / low_tier_chance_pool
+			var penalty = total_chance_boost * proportion_of_pool
+			pet["chance"] = max(0.1, pet["chance"] - penalty)
+	var final_pets = low_tiers + high_tiers
+	var current_total = 0.0
+	for pet in final_pets:
+		current_total += pet["chance"]
+	if current_total > 0:
+		var scale_factor = 100.0 / current_total
+		for pet in final_pets:
+			pet["chance"] *= scale_factor
+	else:
+		return pets.duplicate(true)
+	return final_pets
+
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# 🔹 ANIMATION ET PLACEMENT 3D
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# 🔹 Joue la cinématique de balancement et de révélation pour tous les œufs
+func play_simultaneous_hatch_animation():
+	if active_hatch_instances.is_empty(): return
+	var safe_speed = max(Speed, 1.0)
+	var anim_duration = 1.0 / safe_speed
+	var elapsed_time = 0.0
+	var swing_amount = 0.3
+	var swing_speed = 8.0
+	while elapsed_time < anim_duration:
+		elapsed_time += get_process_delta_time()
+		var angle = sin(elapsed_time * swing_speed) * swing_amount
+		for instance in active_hatch_instances:
+			instance.node.rotation.y = angle
+		await get_tree().process_frame
+	for instance in active_hatch_instances:
+		var egg_model = instance.node.find_child("Egg", true, false)
+		if egg_model:
+			egg_model.visible = false
+		var pet_data = instance.pet_data
+		if pet_data and pet_data.model:
+			var pet_instance = pet_data.model.instantiate()
+			instance.node.add_child(pet_instance)
+			pet_instance.position = Vector3.ZERO
+			pet_instance.scale = Vector3.ONE * 0.5
+	await get_tree().create_timer(0.5 / safe_speed).timeout
+
+# 🔹 Calcule et place les instances d'œufs dans une grille centrée à l'écran
+func place_eggs_on_grid(pets_data: Array):
+	var count = pets_data.size()
+	if count == 0: return
+	var temp_egg = EGG_SCENE.instantiate()
+	var egg_aabb = get_total_aabb(temp_egg)
+	var egg_original_max_dim = max(egg_aabb.size.x, egg_aabb.size.y, egg_aabb.size.z)
+	temp_egg.queue_free()
+	var cols = ceil(sqrt(count))
+	var rows = ceil(count / float(cols))
+	var viewport_size = viewport_container.size
+	var square_cell_size = min(viewport_size.x / cols, viewport_size.y / rows)
+	var total_grid_width = cols * square_cell_size
+	var total_grid_height = rows * square_cell_size
+	var x_offset = (viewport_size.x - total_grid_width) / 2.0
+	var y_offset = (viewport_size.y - total_grid_height) / 2.0
+	var plane = Plane(Vector3(0, 0, 1), 0)
+	for i in range(count):
+		var col = i % int(cols)
+		var row = floor(i / cols)
+		var current_x_offset = x_offset
+		if row == int(rows) - 1:
+			var items_in_last_row = count - (int(rows - 1) * int(cols))
+			if items_in_last_row > 0:
+				var last_row_width = items_in_last_row * square_cell_size
+				current_x_offset = (viewport_size.x - last_row_width) / 2.0
+		var screen_pos = Vector2(current_x_offset + (col * square_cell_size), y_offset + (row * square_cell_size))
+		screen_pos += Vector2(square_cell_size / 2.0, square_cell_size / 2.0)
+		var ray_origin = camera.project_ray_origin(screen_pos)
+		var ray_normal = camera.project_ray_normal(screen_pos)
+		var world_pos = plane.intersects_ray(ray_origin, ray_normal)
+		if world_pos != null:
+			var egg_instance = EGG_SCENE.instantiate()
+			var target_egg_size = get_3d_world_size_from_viewport(Vector2(square_cell_size, square_cell_size)).x
+			var correct_scale_factor = 1.0
+			if egg_original_max_dim > 0.001:
+				correct_scale_factor = target_egg_size / egg_original_max_dim
+			correct_scale_factor *= global_egg_scale_multiplier
+			egg_instance.scale = Vector3.ONE * correct_scale_factor
+			egg_instance.position = world_pos
+			egg_grid_container.add_child(egg_instance)
+			active_hatch_instances.append({"node": egg_instance, "pet_data": pets_data[i]})
+
+
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# 🔹 GESTION DE L'INVENTAIRE ET DE L'INTERFACE (UI)
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# 🔹 Construit l'interface de l'inventaire et les données associées au démarrage
+func build_dynamic_inventory():
+	for child in inventory_stack.get_children():
+		child.queue_free()
+	inventory_count.clear()
+	rarity_data_map.clear()
+	
+	rarities.sort_custom(func(a, b): return a["order"] < b["order"])
+	
+	for rarity_info in rarities:
+		var rarity_name = rarity_info["name"]
+		
+		var new_container = VBoxContainer.new()
+		new_container.name = rarity_name
+		inventory_stack.add_child(new_container)
+		
+		rarity_data_map[rarity_name] = {
+			"color": rarity_info["color"],
+			"container_node": new_container
+		}
+
+	for pet_info in pets:
+		inventory_count[pet_info["name"]] = 0
+
+# 🔹 Ajoute un pet à l'inventaire visuel ou met à jour son compteur
+func add_pet_to_inventory(pet_data: Dictionary):
+	var pet_name = pet_data["name"]
+	var pet_rarity = pet_data["rarity"]
+	
+	if inventory_count.has(pet_name):
+		inventory_count[pet_name] += 1
+	
+	if not rarity_data_map.has(pet_rarity):
+		printerr("Rareté '%s' non trouvée pour le pet '%s'. Vérifiez la configuration." % [pet_rarity, pet_name])
+		return
+	
+	var rarity_info = rarity_data_map[pet_rarity]
+	var container = rarity_info["container_node"]
+	var color = rarity_info["color"]
+	var count = inventory_count[pet_name]
+	var text = "%s x%d" % [pet_name, count]
+	
+	var label = container.find_child(pet_name, false)
+	
+	if label:
+		label.text = text
+	else:
+		var new_label = Label.new()
+		new_label.name = pet_name
+		new_label.text = text
+		new_label.add_theme_color_override("font_color", color)
+		container.add_child(new_label)
+
+# 🔹 Réinitialise les compteurs de pets et vide l'interface de l'inventaire
+func _on_ClearInventoryButton_pressed():
+	for pet_name in inventory_count:
+		inventory_count[pet_name] = 0
+		
+	for rarity_name in rarity_data_map:
+		var container = rarity_data_map[rarity_name]["container_node"]
+		for child in container.get_children():
+			child.queue_free()
+
+# 🔹 Gère le changement d'état visuel du jeu (HATCHING vs INVENTORY)
 func set_state(new_state: GameState):
 	current_state = new_state
 	match current_state:
@@ -67,293 +352,39 @@ func set_state(new_state: GameState):
 			ui_root.visible = true
 			viewport_container.visible = false
 
-func _input(event):
-	if event.is_action_pressed("hatch_one"): # E
-		if not IsHatching and not AutoHatch:
-			hatch_eggs(1)
-	elif event.is_action_pressed("hatch_max"): # R
-		if not IsHatching and not AutoHatch:
-			hatch_eggs(NumberOfEggMax)
-	elif event.is_action_pressed("toggle_auto"): # T
-		AutoHatch = !AutoHatch
-		if AutoHatch:
-			print("🚀 Auto-Hatch activé")
-			auto_hatch_loop()
-		else:
-			print("🛑 Auto-Hatch désactivé")
 
-# 🔹 Tirer un pet
-func hatch_pet() -> Dictionary:
-	var roll = rng.randf_range(0.0001, 100.0)
-	var cumulative = 0.0
-	for pet_data in pets:
-		cumulative += pet_data["chance"]
-		if roll <= cumulative:
-			return pet_data
-	return pets[0] # Retourne "Common" en cas d'erreur
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+# 🔹 FONCTIONS UTILITAIRES
+# ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-
-# ===================================================================
-# LOGIQUE D'ÉCLOSION SIMULTANÉE
-# ===================================================================
-
-# 🔹 Ouvrir un certain nombre d'œufs
-func hatch_eggs(count: int) -> void:
-	if IsHatching:
-		return
-	IsHatching = true
-	
-	# 1. On change de vue pour aller vers la scène 3D
-	set_state(GameState.HATCHING)
-	# On attend une frame pour que la vue soit bien affichée avant de placer les objets
-	await get_tree().process_frame
-	
-	# 2. Nettoyer les instances précédentes
-	for instance in active_hatch_instances:
-		if is_instance_valid(instance.node):
-			instance.node.queue_free()
-	active_hatch_instances.clear()
-	
-	# 3. Tirer tous les pets
-	var pets_to_hatch = []
-	for i in range(count):
-		pets_to_hatch.append(hatch_pet())
-		
-	# 4. Placer les œufs sur la grille
-	place_eggs_on_grid(pets_to_hatch)
-	
-	# 5. Jouer l'animation
-	await play_simultaneous_hatch_animation()
-	
-	# 6. Mettre à jour l'inventaire (cela se fait en arrière-plan)
-	for pet_data in pets_to_hatch:
-		add_pet_to_inventory(pet_data["name"])
-	
-	# 7. Attendre un peu pour que le joueur voie les pets
-	await get_tree().create_timer(1.5).timeout
-	
-	# 8. Nettoyer les modèles 3D
-	for instance in active_hatch_instances:
-		if is_instance_valid(instance.node):
-			instance.node.queue_free()
-	active_hatch_instances.clear()
-	
-	# 9. L'éclosion est finie, on peut en lancer une autre
-	IsHatching = false
-	
-	# 10. Si on n'est pas en auto-hatch, on retourne à l'inventaire
-	if not AutoHatch:
-		set_state(GameState.INVENTORY)
-
-# NOUVELLE FONCTION pour disposer les œufs en grille
-func place_eggs_on_grid(pets_data: Array):
-	var count = pets_data.size()
-	if count == 0:
-		return
-	
-	var cols = ceil(sqrt(count))
-	var rows = ceil(count / float(cols))
-	
-	var viewport_size = viewport_container.size
-	var cell_size_x = viewport_size.x / cols
-	var cell_size_y = viewport_size.y / rows
-	var square_cell_size = min(cell_size_x, cell_size_y)
-	
-	var total_grid_width = cols * square_cell_size
-	var total_grid_height = rows * square_cell_size
-	var x_offset = (viewport_size.x - total_grid_width) / 2.0
-	var y_offset = (viewport_size.y - total_grid_height) / 2.0
-	
-	var plane = Plane(Vector3(0, 0, 1), 0)
-	
-	for i in range(count):
-		var col = i % int(cols)
-		var row = floor(i / cols)
-		
-		var current_x_offset = x_offset # On utilise l'offset général par défaut
-		var is_last_row = (row == int(rows) - 1)
-		if is_last_row:
-			var items_in_last_row = count - (int(rows - 1) * int(cols))
-			if items_in_last_row > 0:
-				var last_row_width = items_in_last_row * square_cell_size
-				# On calcule un offset spécial juste pour cette ligne
-				current_x_offset = (viewport_size.x - last_row_width) / 2.0
-		
-		var screen_pos = Vector2(
-			current_x_offset + (col * square_cell_size),
-			y_offset + (row * square_cell_size)
-		)
-		
-		screen_pos += Vector2(square_cell_size / 2.0, square_cell_size / 2.0)
-		
-		var ray_origin = camera.project_ray_origin(screen_pos)
-		var ray_normal = camera.project_ray_normal(screen_pos)
-		var world_pos = plane.intersects_ray(ray_origin, ray_normal)
-		
-		if world_pos != null:
-			var egg_instance = EGG_SCENE.instantiate()
-			
-			var aabb = get_total_aabb(egg_instance)
-			var original_max_dimension = max(aabb.size.x, aabb.size.y, aabb.size.z)
-			
-			var target_egg_size = get_3d_world_size_from_viewport(Vector2(square_cell_size, square_cell_size)).x
-
-			var correct_scale_factor = 1.0
-			if original_max_dimension > 0.001:
-				correct_scale_factor = target_egg_size / original_max_dimension
-
-			correct_scale_factor *= global_egg_scale_multiplier # Applique notre réglage manuel
-
-			egg_instance.scale = Vector3.ONE * correct_scale_factor
-			egg_instance.position = world_pos
-			
-			egg_grid_container.add_child(egg_instance)
-			active_hatch_instances.append({"node": egg_instance, "pet_data": pets_data[i]})
-
+# 🔹 Calcule la "boîte" englobant un nœud 3D et tous ses enfants visuels
 func get_total_aabb(node: Node3D) -> AABB:
 	var total_aabb = AABB()
-
-	# D'abord, on vérifie si le nœud lui-même est visuel
 	if node is VisualInstance3D:
 		total_aabb = node.get_aabb()
-
-	# Ensuite, on parcourt tous ses enfants
 	for child in node.get_children():
-		if child is Node3D: # On ne traite que les enfants 3D
-			# On récupère l'AABB de l'enfant (et de ses propres enfants, par récursion)
+		if child is Node3D:
 			var child_aabb = get_total_aabb(child)
-
-			# L'AABB de l'enfant est dans son propre espace local.
-			# On doit la transformer pour la mettre dans l'espace du parent avant de la fusionner.
 			child_aabb = child.transform * child_aabb
-
-			# On fusionne l'AABB totale avec celle de l'enfant
 			total_aabb = total_aabb.merge(child_aabb)
-
 	return total_aabb
 
-# NOUVELLE FONCTION D'ANIMATION SIMULTANÉE
-func play_simultaneous_hatch_animation():
-	if active_hatch_instances.is_empty():
-		return
+# 🔹 Convertit un tableau d'octets en un entier 64-bit pour un seed
+func bytes_to_int(bytes: PackedByteArray) -> int:
+	var integer: int = 0
+	for i in min(bytes.size(), 8):
+		integer = (integer << 8) | bytes[i]
+	return integer
 
-	# --- PARTIE 1: Basculement des œufs ---
-	var anim_duration = 0.5
-	var elapsed_time = 0.0
-	var swing_amount = 0.3
-	var swing_speed = 8.0
-
-	while elapsed_time < anim_duration:
-		var delta = get_process_delta_time()
-		elapsed_time += delta
-		
-		# Applique l'animation à TOUS les œufs
-		for instance in active_hatch_instances:
-			var angle = sin(elapsed_time * swing_speed + instance.node.position.x) * swing_amount # Ajoute la position pour un léger décalage
-			instance.node.rotation.y = angle
-		
-		await get_tree().process_frame
-
-	# --- PARTIE 2: "Flash" - Révélation du pet ---
-	for instance in active_hatch_instances:
-		var egg_model = instance.node.find_child("Egg", true, false) # Trouve le modèle de l'œuf dans l'instance
-		if egg_model:
-			egg_model.visible = false # Cache l'œuf
-
-		# Instancie et affiche le pet correspondant
-		var pet_data = instance.pet_data
-		if pet_data and pet_data.model:
-			var pet_instance = pet_data.model.instantiate()
-			# On peut ajouter le pet comme enfant de l'instance de l'œuf pour le positionner facilement
-			instance.node.add_child(pet_instance)
-			pet_instance.position = Vector3.ZERO # Le pet apparaît là où était l'œuf
-			# Ajuste l'échelle du pet si nécessaire
-			pet_instance.scale = Vector3.ONE * 0.5 # Exemple : met le pet à la moitié de la taille de l'oeuf
-
-	# Petite pause pour voir le résultat
-	await get_tree().create_timer(0.5).timeout
-
+# 🔹 Projette une taille en pixels 2D vers une taille dans le monde 3D
 func get_3d_world_size_from_viewport(size_in_pixels: Vector2) -> Vector2:
 	var plane = Plane(Vector3(0, 0, 1), 0)
-
-	# Point d'origine (0,0)
 	var origin_ray_o = camera.project_ray_origin(Vector2.ZERO)
 	var origin_ray_n = camera.project_ray_normal(Vector2.ZERO)
 	var pos0_3d = plane.intersects_ray(origin_ray_o, origin_ray_n)
-
-	# Point correspondant à la taille en pixels
 	var size_ray_o = camera.project_ray_origin(size_in_pixels)
 	var size_ray_n = camera.project_ray_normal(size_in_pixels)
 	var pos_size_3d = plane.intersects_ray(size_ray_o, size_ray_n)
-
 	if pos0_3d != null and pos_size_3d != null:
 		return Vector2(abs(pos_size_3d.x - pos0_3d.x), abs(pos_size_3d.y - pos0_3d.y))
-	
-	# Valeur de secours si la projection échoue
 	return Vector2.ONE
-
-# 🔹 Auto-hatch (boucle tant que AutoHatch = true)
-func auto_hatch_loop() -> void:
-	while AutoHatch:
-		if not IsHatching:
-			await hatch_eggs(NumberOfEggMax)
-		else:
-			await get_tree().process_frame
-	
-	# Quand la boucle AutoHatch se termine (l'utilisateur a appuyé sur T), on retourne à l'inventaire
-	if current_state == GameState.HATCHING:
-		set_state(GameState.INVENTORY)
-
-# 🔹 Ajouter un pet à l’inventaire et UI
-func add_pet_to_inventory(pet_name: String):
-# Incrémente le compteur
-	inventory_count[pet_name] += 1
-	var count = inventory_count[pet_name]
-	var text = "%s x%d" % [pet_name, count]
-
-	# Détermine le conteneur correct
-	var container
-	match pet_name:
-		"Common":
-			container = common_box
-		"Rare":
-			container = rare_box
-		"Legendary":
-			container = legendary_box
-		"Secret":
-			container = secret_box
-		"Mythic":
-			container = mythic_box
-
-	# Détermine la couleur
-	var color
-	match pet_name:
-		"Common":
-			color = Color.WHITE
-		"Rare":
-			color = Color.BLUE
-		"Legendary":
-			color = Color.ORANGE
-		"Secret":
-			color = Color.PURPLE
-		"Mythic":
-			color = Color.YELLOW
-
-	# Si aucun label dans le container, on crée un nouveau
-	if container.get_child_count() == 0:
-		var label = Label.new()
-		label.name = pet_name
-		label.text = text
-		label.add_theme_color_override("font_color", color)
-		container.add_child(label)
-	else:
-		# Met à jour le label existant
-		container.get_child(0).text = text
-
-# 🔹 Vider l’inventaire
-func _on_ClearInventoryButton_pressed():
-	for key in inventory_count.keys():
-		inventory_count[key] = 0
-	for container in [common_box, rare_box, legendary_box, secret_box, mythic_box]:
-		for child in container.get_children():
-			child.queue_free()
