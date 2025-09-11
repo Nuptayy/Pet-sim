@@ -11,30 +11,36 @@ extends Control
 @export var AutoHatch = false
 
 # --- Groupe: Ressenti du Jeu ---
-@export var Speed = 1.0 # Multiplicateur de vitesse des animations. 1.0 = normal.
+@export var Speed = 1 # Multiplicateur de vitesse des animations. 1.0 = normal.
 @export var global_egg_scale_multiplier = 0.5 # Ajuste la taille globale des œufs.
 
 # --- Groupe: Équilibrage ---
 @export var Luck = 1.0 # Multiplicateur de chance pour les pets rares. 1.0 = normal.
-@export var low_tier_rarities: Array[String] = ["Common"] # Raretés qui perdent de la chance.
+@export var low_tier_rarities: Array[String] = ["Common", "Uncommon", "Rare", "Legendary"] # Raretés qui perdent de la chance.
 
 # 🔹 Définit les propriétés de chaque rareté (couleur, ordre d'affichage).
 @export var rarities: Array[Dictionary] = [
-	{"name": "Common",    "color": Color.WHITE,  "order": 0},
-	{"name": "Uncommon",  "color": Color.GREEN,  "order": 1},
-	{"name": "Rare",      "color": Color.BLUE,   "order": 2},
-	{"name": "Legendary", "color": Color.ORANGE, "order": 3},
-	{"name": "Secret",    "color": Color.PURPLE, "order": 4},
-	{"name": "Mythic",    "color": Color.YELLOW, "order": 5}
+	{"name": "Common",      "color": Color.WHITE,          "order": 0},
+	{"name": "Uncommon",    "color": Color.GREEN,          "order": 1},
+	{"name": "Rare",        "color": Color.BLUE,           "order": 2},
+	{"name": "Legendary",   "color": Color.ORANGE,         "order": 3},
+	{"name": "Secret",      "color": Color.PURPLE,         "order": 4},
+	{"name": "Mythic",      "color": Color.YELLOW,         "order": 5},
+	{"name": "Divine",      "color": Color.SKY_BLUE,       "order": 6},
+	{"name": "Insane",      "color": Color.DARK_RED,       "order": 7},
+	{"name": "WTF",         "color": Color.GOLD,           "order": 8},
+	{"name": "GodLike",     "color": Color.REBECCA_PURPLE, "order": 9},
+	{"name": "Impossible",  "color": Color.LIGHT_YELLOW,   "order": 10}
 ]
 
 # 🔹 Définit chaque pet individuel, sa chance, son modèle et sa rareté.
 @export var pets: Array[Dictionary] = [
-	{"name":"Cat",       "chance": 80.0,    "model": preload("res://Assets/Pets/cat/Untitled (1).fbx"),   "rarity": "Common"},
-	{"name":"Bee",       "chance": 15.0,    "model": preload("res://Assets/Pets/bee/BeePets.fbx"),      "rarity": "Rare"},
-	{"name":"Rabbit",    "chance": 4.9989,  "model": preload("res://Assets/Pets/Rabbit/Untitled.glb"), "rarity": "Legendary"},
-	{"name":"Test1",     "chance": 0.001,   "model": preload("res://Assets/Egg.glb"),                  "rarity": "Secret"},
-	{"name":"Test2",     "chance": 0.0001,  "model": preload("res://Assets/Egg.glb"),                  "rarity": "Mythic"}
+	{"name":"Cat",       "chance": 50.0,    "model": preload("res://Assets/Pets/cat/Untitled (1).fbx"),  "rarity": "Common"},
+	{"name":"Rabbit",    "chance": 30.0,    "model": preload("res://Assets/Pets/Rabbit/Untitled.glb"),   "rarity": "Uncommon"},
+	{"name":"Bee",       "chance": 15.0,    "model": preload("res://Assets/Pets/bee/BeePets.fbx"),       "rarity": "Rare"},
+	{"name":"Test1",     "chance": 4.9989,  "model": preload("res://Assets/Egg.glb"),                    "rarity": "Legendary"},
+	{"name":"Test2",     "chance": 0.001,   "model": preload("res://Assets/Egg.glb"),                    "rarity": "Secret"},
+	{"name":"Test3",     "chance": 0.0001,  "model": preload("res://Assets/Egg.glb"),                    "rarity": "Mythic"}
 ]
 
 
