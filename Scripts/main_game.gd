@@ -307,27 +307,38 @@ func add_pet_to_inventory(pet_data: Dictionary):
 	var pet_name = pet_data["name"]
 	var pet_rarity = pet_data["rarity"]
 	
+	# 1. Incrémente le compteur pour ce pet spécifique.
 	if inventory_count.has(pet_name):
 		inventory_count[pet_name] += 1
+	else:
+		# Sécurité au cas où le pet n'aurait pas été initialisé.
+		inventory_count[pet_name] = 1
 	
+	# 2. Récupère les données de la rareté du pet (couleur, conteneur).
 	if not rarity_data_map.has(pet_rarity):
 		printerr("Rareté '%s' non trouvée pour le pet '%s'. Vérifiez la configuration." % [pet_rarity, pet_name])
 		return
 	
 	var rarity_info = rarity_data_map[pet_rarity]
-	var container = rarity_info["container_node"]
-	var color = rarity_info["color"]
+	var container: VBoxContainer = rarity_info["container_node"]
+	var color: Color = rarity_info["color"]
+	
+	# 3. Prépare le texte à afficher.
 	var count = inventory_count[pet_name]
-	var text = "%s x%d" % [pet_name, count]
+	var text_to_display = "%s x%d" % [pet_name, count]
 	
-	var label = container.find_child(pet_name, false)
+	# 4. Cherche si un label pour ce pet existe déjà dans le bon conteneur.
+	# La correction clé est ici : le troisième paramètre 'false' rend la recherche plus fiable pour les nœuds créés dynamiquement.
+	var label_node: Label = container.find_child(pet_name, false, false)
 	
-	if label:
-		label.text = text
+	if label_node:
+		# Le label existe, on met juste à jour son texte.
+		label_node.text = text_to_display
 	else:
+		# Le label n'existe pas, on le crée et on l'ajoute.
 		var new_label = Label.new()
-		new_label.name = pet_name
-		new_label.text = text
+		new_label.name = pet_name # Important pour le retrouver la prochaine fois.
+		new_label.text = text_to_display
 		new_label.add_theme_color_override("font_color", color)
 		container.add_child(new_label)
 
