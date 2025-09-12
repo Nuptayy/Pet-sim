@@ -9,7 +9,7 @@
 [node name="Main" type="Node"]
 script = ExtResource("1_kln2b")
 
-[node name="HatchingLogic" type="Node" parent="."]
+[node name="HatchingLogic" type="Node" parent="." groups=["hatching_logic"]]
 unique_name_in_owner = true
 script = ExtResource("2_pbw6q")
 

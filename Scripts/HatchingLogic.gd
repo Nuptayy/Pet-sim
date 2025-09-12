@@ -202,6 +202,11 @@ func place_eggs_on_grid(pets_data: Array, egg_name: String):
 		var world_pos = plane.intersects_ray(ray_origin, ray_normal)
 		if world_pos != null:
 			var egg_instance = egg_model_to_use.instantiate()
+			
+			var visual_node = find_mesh_recursively(egg_instance)
+			if visual_node:
+				visual_node.layers = 1
+			
 			var target_egg_size = get_3d_world_size_from_viewport(Vector2(square_cell_size, square_cell_size)).x
 			var correct_scale_factor = 1.0
 			if egg_original_max_dim > 0.001:

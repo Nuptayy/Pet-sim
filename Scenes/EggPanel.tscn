@@ -4,36 +4,52 @@
 [ext_resource type="PackedScene" uid="uid://5s174ha0wbuc" path="res://Scenes/EggPreview3D.tscn" id="2_6pwwq"]
 
 [node name="EggPanel" type="PanelContainer"]
-offset_right = 560.0
-offset_bottom = 512.0
 script = ExtResource("1_6os55")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 
-[node name="EggPreview" type="SubViewportContainer" parent="HBoxContainer"]
+[node name="EggPreview" type="SubViewportContainer" parent="MarginContainer/HBoxContainer"]
 custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
+size_flags_stretch_ratio = 0.0
+stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="HBoxContainer/EggPreview"]
+[node name="SubViewport" type="SubViewport" parent="MarginContainer/HBoxContainer/EggPreview"]
 transparent_bg = true
 handle_input_locally = false
+size = Vector2i(128, 136)
 render_target_update_mode = 4
 
-[node name="EggPreview3D" parent="HBoxContainer/EggPreview/SubViewport" instance=ExtResource("2_6pwwq")]
+[node name="EggPreview3D" parent="MarginContainer/HBoxContainer/EggPreview/SubViewport" instance=ExtResource("2_6pwwq")]
 
-[node name="Hatch1Button" type="Button" parent="HBoxContainer"]
+[node name="ButtonContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Hatch1Button" type="Button" parent="MarginContainer/HBoxContainer/ButtonContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+text = "Hatch 1"
 
-[node name="HatchMaxButton" type="Button" parent="HBoxContainer"]
+[node name="HatchMaxButton" type="Button" parent="MarginContainer/HBoxContainer/ButtonContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+text = "Hatch Max"
 
-[node name="AutoHatchButton" type="Button" parent="HBoxContainer"]
+[node name="AutoHatchButton" type="Button" parent="MarginContainer/HBoxContainer/ButtonContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+text = "Auto Hatch"
 
-[node name="SelectButton" type="Button" parent="HBoxContainer"]
+[node name="SelectButton" type="Button" parent="MarginContainer/HBoxContainer/ButtonContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+text = "Select"
