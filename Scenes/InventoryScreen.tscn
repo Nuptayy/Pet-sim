@@ -1,0 +1,120 @@
+[gd_scene load_steps=3 format=3 uid="uid://ch0ctkc3lfu03"]
+
+[ext_resource type="Script" uid="uid://cfdv8fou8keh6" path="res://Scripts/InventoryScreen.gd" id="1_qpyh4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kmrk1"]
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="InventoryScreen" type="PanelContainer"]
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_kmrk1")
+script = ExtResource("1_qpyh4")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="MarginContainer/VBoxContainer/Header"]
+layout_mode = 2
+
+[node name="StorageLabel" type="Label" parent="MarginContainer/VBoxContainer/Header"]
+layout_mode = 2
+text = "Storage"
+
+[node name="PetCountLabel" type="Label" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "/99999"
+
+[node name="HSplitContainer" type="HSplitContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="DetailsPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/HSplitContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel"]
+layout_mode = 2
+
+[node name="PetPreviewViewport" type="SubViewportContainer" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SubViewport" type="SubViewport" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer/PetPreviewViewport"]
+handle_input_locally = false
+render_target_update_mode = 4
+
+[node name="PetPreviewScene" type="Node3D" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer/PetPreviewViewport/SubViewport"]
+
+[node name="Camera3D" type="Camera3D" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer/PetPreviewViewport/SubViewport/PetPreviewScene"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer/PetPreviewViewport/SubViewport/PetPreviewScene"]
+
+[node name="PetHolder" type="Node3D" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer/PetPreviewViewport/SubViewport/PetPreviewScene"]
+unique_name_in_owner = true
+
+[node name="PetNameLabel" type="Label" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RarityLabel" type="Label" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ChanceLabel" type="Label" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="PowerLabel" type="Label" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LuckBoostLabel" type="Label" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SpeedBoostLabel" type="Label" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EquipButton" type="Button" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+layout_mode = 2
+text = "Equip"
+
+[node name="DeleteButton" type="Button" parent="MarginContainer/VBoxContainer/HSplitContainer/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Delete"
+
+[node name="GridScroll" type="ScrollContainer" parent="MarginContainer/VBoxContainer/HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PetGrid" type="GridContainer" parent="MarginContainer/VBoxContainer/HSplitContainer/GridScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+text = "X"

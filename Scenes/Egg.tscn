@@ -5,5 +5,3 @@
 [node name="EggParent" type="Node3D"]
 
 [node name="Egg" parent="." instance=ExtResource("1_eh8xx")]
-
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

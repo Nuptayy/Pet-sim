@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3 uid="uid://b0kujnmv7o114"]
+
+[ext_resource type="Script" uid="uid://div21lpici42h" path="res://Scripts/main.gd" id="1_kln2b"]
+[ext_resource type="Script" uid="uid://bn1j1qcdph05b" path="res://Scripts/HatchingLogic.gd" id="2_pbw6q"]
+[ext_resource type="PackedScene" uid="uid://bkoqp428qpx3f" path="res://Scenes/HatchingScreen.tscn" id="2_rgh2o"]
+[ext_resource type="PackedScene" uid="uid://ch0ctkc3lfu03" path="res://Scenes/InventoryScreen.tscn" id="3_pbw6q"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_kln2b")
+
+[node name="HatchingLogic" type="Node" parent="."]
+script = ExtResource("2_pbw6q")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="HatchingScreen" parent="CanvasLayer" instance=ExtResource("2_rgh2o")]
+
+[node name="InventoryScreen" parent="CanvasLayer" instance=ExtResource("3_pbw6q")]
+offset_right = 91.0
+offset_bottom = 256.0

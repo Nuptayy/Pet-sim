@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://cldf47bb6sds7"]
+
+[ext_resource type="Script" uid="uid://ycin2bdvnflk" path="res://Scripts/PetSlot.gd" id="1_xcdxy"]
+
+[node name="PetSlot" type="Button"]
+offset_right = 8.0
+offset_bottom = 8.0
+script = ExtResource("1_xcdxy")

@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3 uid="uid://5s174ha0wbuc"]
+
+[ext_resource type="PackedScene" uid="uid://vf8upug7h4je" path="res://Scenes/Egg.tscn" id="1_6txrr"]
+
+[node name="EggPreview3D" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, -0.5, 0.5, 0, 0, 0)
+shadow_enabled = true
+
+[node name="ObjectHolder" type="Node3D" parent="."]
+
+[node name="EggParent" parent="ObjectHolder" instance=ExtResource("1_6txrr")]

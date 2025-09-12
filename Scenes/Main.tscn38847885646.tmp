@@ -1,0 +1,34 @@
+[gd_scene load_steps=6 format=3 uid="uid://b0kujnmv7o114"]
+
+[ext_resource type="Script" uid="uid://div21lpici42h" path="res://Scripts/main.gd" id="1_kln2b"]
+[ext_resource type="Script" uid="uid://bn1j1qcdph05b" path="res://Scripts/HatchingLogic.gd" id="2_pbw6q"]
+[ext_resource type="PackedScene" uid="uid://bkoqp428qpx3f" path="res://Scenes/HatchingScreen.tscn" id="2_rgh2o"]
+[ext_resource type="PackedScene" uid="uid://ch0ctkc3lfu03" path="res://Scenes/InventoryScreen.tscn" id="3_pbw6q"]
+[ext_resource type="PackedScene" uid="uid://qa3lkyblum14" path="res://Scenes/HatchingAnimation.tscn" id="3_v1gob"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_kln2b")
+
+[node name="HatchingLogic" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_pbw6q")
+
+[node name="HatchingAnimation" parent="." instance=ExtResource("3_v1gob")]
+unique_name_in_owner = true
+visible = false
+
+[node name="HatchingScreen" parent="." instance=ExtResource("2_rgh2o")]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 950.0
+offset_top = 130.0
+offset_right = 970.0
+offset_bottom = 950.0
+
+[node name="InventoryScreen" parent="." instance=ExtResource("3_pbw6q")]
+unique_name_in_owner = true
+visible = false
+offset_right = 544.0
+offset_bottom = 838.0
