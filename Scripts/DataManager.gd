@@ -49,7 +49,6 @@ var egg_definitions = [{"name": "Basic Egg", "model": preload("res://Scenes/Egg.
 var player_inventory: Array[Dictionary] = []
 var next_pet_unique_id = 0
 
-
 # 🔹 Ajoute un pet UNIQUE à l'inventaire du joueur.
 func add_pet_to_inventory(pet_base_name: String, pet_type_info: Dictionary):
 	var new_pet_instance = {"unique_id": next_pet_unique_id, "base_name": pet_base_name, "type": pet_type_info, "stats": calculate_final_stats(pet_base_name, pet_type_info)}
