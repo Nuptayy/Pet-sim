@@ -6,6 +6,20 @@ signal close_requested
 const PET_SLOT_SCENE = preload("res://Scenes/PetSlot.tscn")
 var current_selected_pet_id = -1
 
+# 🔹 Références aux nœuds de l'interface (utilisez la notation % pour plus de sécurité).
+@onready var details_panel: PanelContainer = %DetailsPanel
+@onready var pet_grid: GridContainer = %PetGrid
+@onready var close_button: Button = %CloseButton
+@onready var delete_button: Button = %DeleteButton
+@onready var pet_count_label: Label = %PetCountLabel
+@onready var pet_holder: Node3D = %PetHolder
+@onready var pet_name_label: Label = %PetNameLabel
+@onready var rarity_label: Label = %RarityLabel
+@onready var chance_label: Label = %ChanceLabel
+@onready var power_label: Label = %PowerLabel
+@onready var luck_boost_label: Label = %LuckBoostLabel
+@onready var speed_boost_label: Label = %SpeedBoostLabel
+
 func _ready():
 	%DetailsPanel.visible = false
 	%CloseButton.pressed.connect(func(): close_requested.emit())
@@ -35,7 +49,7 @@ func display_pet_details(pet_id: int):
 	var base_pet_def = DataManager.pet_definitions[pet_data["base_name"]]
 	var rarity_def = DataManager.rarities[base_pet_def["rarity"]]
 	
-	%PetNameLabel.text = "[b]%s (%s)[/b]" % [pet_data["base_name"], pet_data["type"]["name"]]
+	%PetNameLabel.text = "%s (%s)" % [pet_data["base_name"], pet_data["type"]["name"]]
 	%RarityLabel.text = base_pet_def["rarity"]
 	%RarityLabel.add_theme_color_override("font_color", rarity_def["color"])
 	%ChanceLabel.text = "(1 in %s)" % format_chance(base_pet_def["chance"])

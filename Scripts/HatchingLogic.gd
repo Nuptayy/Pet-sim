@@ -2,7 +2,7 @@
 extends Node
 
 # 🔹 Paramètres de jeu, configurables depuis l'inspecteur
-@export var NumberOfEggMax = 12
+@export var NumberOfEggMax = 50
 @export var Luck = 1.0
 @export var Speed = 1.0
 @export var global_egg_scale_multiplier = 0.5
