@@ -1,0 +1,44 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://byquga1kh0mau"
+path.s3tc="res://.godot/imported/Cat_360_F_257452416_aLQxh9NwlSzrMFwJRTonFF1J2rY8zF2Q.jpg-840c9ea66469f064f4be9bce42ce0ab7.s3tc.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "1eb82d66e0fc622c8305576dffa966dc"
+}
+
+[deps]
+
+source_file="res://Assets/Pets/cat/Cat_360_F_257452416_aLQxh9NwlSzrMFwJRTonFF1J2rY8zF2Q.jpg"
+dest_files=["res://.godot/imported/Cat_360_F_257452416_aLQxh9NwlSzrMFwJRTonFF1J2rY8zF2Q.jpg-840c9ea66469f064f4be9bce42ce0ab7.s3tc.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=0

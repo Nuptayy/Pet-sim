@@ -5,6 +5,8 @@
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 cull_mask = 4
+projection = 1
+size = 4.0
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 layers = 4

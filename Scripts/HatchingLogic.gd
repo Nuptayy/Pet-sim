@@ -221,6 +221,8 @@ func place_eggs_on_grid(pets_data: Array, egg_name: String):
 func play_simultaneous_hatch_animation():
 	if active_hatch_instances.is_empty(): return
 	var safe_speed = max(Speed, 1.0)
+	
+	# --- ÉTAPE 1: Animation de balancement des œufs ---
 	var anim_duration = 1.0 / safe_speed
 	var elapsed_time = 0.0
 	var swing_amount = 0.3
@@ -232,17 +234,55 @@ func play_simultaneous_hatch_animation():
 			instance.node.rotation.y = angle
 		await get_tree().process_frame
 
+	# --- ÉTAPE 2: Révélation et Agrandissement des pets ---
 	for instance in active_hatch_instances:
-		var egg_model_node = instance.node.get_child(0) # Suppose que le modèle de l'œuf est le premier enfant
-		if egg_model_node: egg_model_node.visible = false
+		var pet_holder_node = instance.node
+		
+		# On cache l'œuf.
+		var egg_model_node = pet_holder_node.get_child(0)
+		if egg_model_node:
+			egg_model_node.visible = false
+		
 		var pet_data = instance.pet_data
 		var pet_def = DataManager.pet_definitions[pet_data["base_name"]]
+		
 		if pet_def and pet_def.model:
 			var pet_instance = pet_def.model.instantiate()
-			instance.node.add_child(pet_instance)
+			pet_holder_node.add_child(pet_instance)
+			
+			# --- NOUVELLE LOGIQUE DE MISE À L'ÉCHELLE (SIMPLIFIÉE) ---
+			# Le pet doit avoir la même taille que l'œuf qu'il remplace.
+			# Pour cela, on doit annuler l'échelle héritée du parent (le support).
+			# On récupère la taille originale du modèle du pet.
+			var pet_aabb = get_total_aabb(pet_instance)
+			var pet_original_max_dim = max(pet_aabb.size.x, pet_aabb.size.y, pet_aabb.size.z)
+			
+			# On récupère la taille originale du modèle de l'œuf (on doit la recalculer ici).
+			var egg_model = instance.node.get_child(0)
+			var egg_aabb = get_total_aabb(egg_model)
+			var egg_original_max_dim = max(egg_aabb.size.x, egg_aabb.size.y, egg_aabb.size.z)
+
+			# On calcule le ratio de taille entre l'œuf et le pet.
+			var scale_ratio = 1.0
+			if pet_original_max_dim > 0.001:
+				scale_ratio = egg_original_max_dim / pet_original_max_dim
+				
+			# On applique ce ratio au pet pour qu'il ait la même taille que l'œuf.
+			# Le pet héritera ensuite de l'échelle du support, ce qui lui donnera la taille finale désirée.
+			pet_instance.scale = Vector3.ONE * scale_ratio
+			# ---------------------------------------------
+			
 			pet_instance.position = Vector3.ZERO
-			pet_instance.scale = Vector3.ONE * 0.5
+			
+			# On oriente le pet pour qu'il fasse face à la caméra.
+			pet_instance.global_rotation = camera.global_rotation
+
+			var visual_node = find_mesh_recursively(pet_instance)
+			if visual_node:
+				visual_node.layers = 1
+			
 			apply_visual_effect(pet_instance, pet_data["type"])
+			
 	await get_tree().create_timer(0.5 / safe_speed).timeout
 
 # --- Fonctions Utilitaires ---

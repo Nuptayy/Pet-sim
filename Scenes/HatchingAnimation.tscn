@@ -5,6 +5,8 @@
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 cull_mask = 1
+projection = 1
+size = 3.0
 
 [node name="EggGridContainer" type="Node3D" parent="."]
 

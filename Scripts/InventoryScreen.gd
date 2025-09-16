@@ -26,6 +26,7 @@ func _ready():
 	%DeleteButton.pressed.connect(_on_delete_pressed)
 	DataManager.inventory_updated.connect(redraw_inventory)
 	DataManager.total_pet_count_changed.connect(_update_total_count)
+	visibility_changed.connect(_on_visibility_changed)
 	redraw_inventory()
 	_update_total_count(DataManager.player_inventory.size())
 
@@ -63,6 +64,10 @@ func display_pet_details(pet_id: int):
 		child.queue_free()
 	var pet_model = base_pet_def["model"].instantiate()
 	pet_holder.add_child(pet_model)
+	
+	var visual_node = find_mesh_recursively(pet_model)
+	if visual_node:
+		visual_node.layers = 4
 	
 	apply_preview_effect(pet_model, pet_data["type"])
 
@@ -120,3 +125,9 @@ func find_mesh_recursively(node: Node) -> MeshInstance3D:
 		var mesh = find_mesh_recursively(child)
 		if mesh: return mesh
 	return null
+
+# 🔹 Appelé quand l'écran de l'inventaire devient invisible.
+func _on_visibility_changed():
+	if not visible:
+		details_panel.visible = false
+		current_selected_pet_id = -1
