@@ -89,10 +89,12 @@ func get_pets_from_egg(egg_name: String) -> Array:
 	var result = []
 	for egg_def in DataManager.egg_definitions:
 		if egg_def["name"] == egg_name:
-			for pet_name in egg_def["pets"]:
-				var pet_def = DataManager.pet_definitions[pet_name].duplicate(true)
-				pet_def["name"] = pet_name # S'assure que le nom est inclus
-				result.append(pet_def)
+			for pet_info_in_egg in egg_def["pets"]:
+				var pet_name = pet_info_in_egg["name"]
+				var full_pet_def = DataManager.pet_definitions[pet_name].duplicate(true)
+				full_pet_def["name"] = pet_name
+				full_pet_def["chance"] = pet_info_in_egg["chance"]
+				result.append(full_pet_def)
 			return result
 	return []
 

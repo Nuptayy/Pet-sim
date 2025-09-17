@@ -47,13 +47,22 @@ func display_pet_details(pet_id: int):
 		%DetailsPanel.visible = false
 		return
 
-	var base_pet_def = DataManager.pet_definitions[pet_data["base_name"]]
+	var pet_base_name = pet_data["base_name"]
+	var base_pet_def = DataManager.pet_definitions[pet_base_name]
 	var rarity_def = DataManager.rarities[base_pet_def["rarity"]]
 	
 	%PetNameLabel.text = "%s (%s)" % [pet_data["base_name"], pet_data["type"]["name"]]
 	%RarityLabel.text = base_pet_def["rarity"]
 	%RarityLabel.add_theme_color_override("font_color", rarity_def["color"])
-	%ChanceLabel.text = "(1 in %s)" % format_chance(base_pet_def["chance"])
+	
+	var display_chance = 0.0
+	if not DataManager.egg_definitions.is_empty():
+		var first_egg_pets = DataManager.egg_definitions[0]["pets"]
+		for pet_info in first_egg_pets:
+			if pet_info["name"] == pet_base_name:
+				display_chance = pet_info["chance"]
+				break
+	%ChanceLabel.text = "(1 in %s)" % format_chance(display_chance)
 	
 	%PowerLabel.text = "Power: %s" % pet_data["stats"]["Power"]
 	%LuckBoostLabel.text = "Luck Boost: x%s" % pet_data["stats"]["LuckBoost"]

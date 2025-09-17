@@ -34,16 +34,29 @@ var pet_types = [
 
 # 🔹 Définition de chaque pet et de ses stats de BASE.
 var pet_definitions = {
-	"Cat":    {"base_stats": {"Power": 1, "LuckBoost": 1.0, "SpeedBoost": 1.0}, "rarity": "Common",    "chance": 50.0,   "model": preload("res://Assets/Pets/cat/Cat.glb")},
-	"Rabbit": {"base_stats": {"Power": 2, "LuckBoost": 1.1, "SpeedBoost": 1.0}, "rarity": "Uncommon",  "chance": 30.0,   "model": preload("res://Assets/Pets/Rabbit/Untitled.glb")},
-	"Bee":    {"base_stats": {"Power": 5, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Epic",      "chance": 15.0,   "model": preload("res://Assets/Pets/bee/Bee.glb")},
-	"Test1":  {"base_stats": {"Power": 3, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Rare",      "chance": 4.9989, "model": preload("res://Assets/Egg.glb")},
-	"Test2":  {"base_stats": {"Power": 10,"LuckBoost": 1.5, "SpeedBoost": 1.2}, "rarity": "Legendary", "chance": 0.001,  "model": preload("res://Assets/Egg.glb")},
-	"Test3":  {"base_stats": {"Power": 25,"LuckBoost": 2.0, "SpeedBoost": 1.5}, "rarity": "Mythic",    "chance": 0.0001, "model": preload("res://Assets/Egg.glb")}
+	"Cat":    {"base_stats": {"Power": 1, "LuckBoost": 1.0, "SpeedBoost": 1.0}, "rarity": "Common",   "model": preload("res://Assets/Pets/cat/Cat.glb")},
+	"Rabbit": {"base_stats": {"Power": 2, "LuckBoost": 1.1, "SpeedBoost": 1.0}, "rarity": "Uncommon", "model": preload("res://Assets/Pets/Rabbit/Untitled.glb")},
+	"Bee":    {"base_stats": {"Power": 5, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Epic",     "model": preload("res://Assets/Pets/bee/Bee.glb")},
+	"Test1":  {"base_stats": {"Power": 3, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Rare",     "model": preload("res://Assets/Egg.glb")},
+	"Test2":  {"base_stats": {"Power": 10,"LuckBoost": 1.5, "SpeedBoost": 1.2}, "rarity": "Legendary","model": preload("res://Assets/Egg.glb")},
+	"Test3":  {"base_stats": {"Power": 25,"LuckBoost": 2.0, "SpeedBoost": 1.5}, "rarity": "Mythic",   "model": preload("res://Assets/Egg.glb")}
 }
 
 # 🔹 Définition des œufs et des pets qu'ils peuvent contenir.
-var egg_definitions = [{"name": "Basic Egg", "model": preload("res://Scenes/Egg.tscn"), "pets": ["Cat", "Rabbit", "Bee", "Test1", "Test2", "Test3"]}]
+var egg_definitions = [
+	{
+		"name": "Basic Egg",
+		"model": preload("res://Scenes/Egg.tscn"),
+		"pets": [
+			{"name": "Cat",    "chance": 50.0},
+			{"name": "Rabbit", "chance": 30.0},
+			{"name": "Bee",    "chance": 15.0},
+			{"name": "Test1",  "chance": 4.9989},
+			{"name": "Test2",  "chance": 0.001},
+			{"name": "Test3",  "chance": 0.0001}
+		]
+	}
+]
 
 # 🔹 Inventaire réel du joueur.
 var player_inventory: Array[Dictionary] = []
