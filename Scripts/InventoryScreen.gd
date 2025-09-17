@@ -63,7 +63,6 @@ func display_pet_details(pet_id: int):
 				display_chance = pet_info["chance"]
 				break
 	%ChanceLabel.text = "(1 in %s)" % format_chance(display_chance)
-	
 	%PowerLabel.text = "Power: %s" % pet_data["stats"]["Power"]
 	%LuckBoostLabel.text = "Luck Boost: x%s" % pet_data["stats"]["LuckBoost"]
 	%SpeedBoostLabel.text = "Speed Boost: x%s" % pet_data["stats"]["SpeedBoost"]
