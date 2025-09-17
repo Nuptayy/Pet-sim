@@ -68,7 +68,6 @@ func display_pet_details(pet_id: int):
 	%LuckBoostLabel.text = "Luck Boost: x%s" % pet_data["stats"]["LuckBoost"]
 	%SpeedBoostLabel.text = "Speed Boost: x%s" % pet_data["stats"]["SpeedBoost"]
 	
-	var pet_holder = %PetHolder
 	for child in pet_holder.get_children():
 		child.queue_free()
 	var pet_model = base_pet_def["model"].instantiate()
