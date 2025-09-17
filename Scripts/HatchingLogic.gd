@@ -2,10 +2,10 @@
 extends Node
 
 # 🔹 Paramètres de jeu, configurables depuis l'inspecteur
-@export var NumberOfEggMax = 50
+@export var NumberOfEggMax = 12
 @export var Luck = 1.0
 @export var Speed = 1.0
-@export var global_egg_scale_multiplier = 0.5
+@export var global_egg_scale_multiplier = 0.65
 @export var low_tier_rarities: Array[String] = ["Common", "Uncommon", "Rare", "Legendary"]
 
 # 🔹 Variables internes
@@ -216,13 +216,12 @@ func place_eggs_on_grid(pets_data: Array, egg_name: String):
 			egg_instance.position = world_pos
 			egg_grid_container.add_child(egg_instance)
 			active_hatch_instances.append({"node": egg_instance, "pet_data": pets_data[i]})
-	
+
 # 🔹 Joue la cinématique de balancement et de révélation
 func play_simultaneous_hatch_animation():
 	if active_hatch_instances.is_empty(): return
 	var safe_speed = max(Speed, 1.0)
 	
-	# --- ÉTAPE 1: Animation de balancement des œufs ---
 	var anim_duration = 1.0 / safe_speed
 	var elapsed_time = 0.0
 	var swing_amount = 0.3
@@ -233,12 +232,10 @@ func play_simultaneous_hatch_animation():
 		for instance in active_hatch_instances:
 			instance.node.rotation.y = angle
 		await get_tree().process_frame
-
-	# --- ÉTAPE 2: Révélation et Agrandissement des pets ---
+	
 	for instance in active_hatch_instances:
 		var pet_holder_node = instance.node
 		
-		# On cache l'œuf.
 		var egg_model_node = pet_holder_node.get_child(0)
 		if egg_model_node:
 			egg_model_node.visible = false
@@ -250,33 +247,11 @@ func play_simultaneous_hatch_animation():
 			var pet_instance = pet_def.model.instantiate()
 			pet_holder_node.add_child(pet_instance)
 			
-			# --- NOUVELLE LOGIQUE DE MISE À L'ÉCHELLE (SIMPLIFIÉE) ---
-			# Le pet doit avoir la même taille que l'œuf qu'il remplace.
-			# Pour cela, on doit annuler l'échelle héritée du parent (le support).
-			# On récupère la taille originale du modèle du pet.
-			var pet_aabb = get_total_aabb(pet_instance)
-			var pet_original_max_dim = max(pet_aabb.size.x, pet_aabb.size.y, pet_aabb.size.z)
-			
-			# On récupère la taille originale du modèle de l'œuf (on doit la recalculer ici).
-			var egg_model = instance.node.get_child(0)
-			var egg_aabb = get_total_aabb(egg_model)
-			var egg_original_max_dim = max(egg_aabb.size.x, egg_aabb.size.y, egg_aabb.size.z)
-
-			# On calcule le ratio de taille entre l'œuf et le pet.
-			var scale_ratio = 1.0
-			if pet_original_max_dim > 0.001:
-				scale_ratio = egg_original_max_dim / pet_original_max_dim
-				
-			# On applique ce ratio au pet pour qu'il ait la même taille que l'œuf.
-			# Le pet héritera ensuite de l'échelle du support, ce qui lui donnera la taille finale désirée.
-			pet_instance.scale = Vector3.ONE * scale_ratio
-			# ---------------------------------------------
+			pet_instance.scale = egg_model_node.scale
 			
 			pet_instance.position = Vector3.ZERO
-			
-			# On oriente le pet pour qu'il fasse face à la caméra.
 			pet_instance.global_rotation = camera.global_rotation
-
+			
 			var visual_node = find_mesh_recursively(pet_instance)
 			if visual_node:
 				visual_node.layers = 1
@@ -289,29 +264,28 @@ func play_simultaneous_hatch_animation():
 
 func apply_visual_effect(pet_node: Node3D, type_info: Dictionary):
 	var mesh_instance = find_mesh_recursively(pet_node)
-	if not mesh_instance:
-		printerr("Impossible de trouver un MeshInstance3D pour appliquer l'effet visuel sur ", pet_node.name)
-		return
+	if not mesh_instance: return
+	mesh_instance.material_override = null
+	mesh_instance.material_overlay = null
 	var effect_type = type_info["effect_type"]
 	var effect_value = type_info["value"]
+	
 	match effect_type:
 		"none": pass
-		"color":
-			for i in range(mesh_instance.get_surface_override_material_count()):
-				var original_material = mesh_instance.get_surface_override_material(i)
-				var new_material = original_material.duplicate() if original_material else StandardMaterial3D.new()
-				if new_material is StandardMaterial3D:
-					new_material.albedo_color = effect_value
-					mesh_instance.set_surface_override_material(i, new_material)
+#		"color":
+#			for i in range(mesh_instance.get_surface_override_material_count()):
+#				var original_material = mesh_instance.get_active_material(i)
+#				var new_material = original_material.duplicate(true) if original_material else StandardMaterial3D.new()
+#				if new_material is StandardMaterial3D:
+#					new_material.albedo_color = effect_value
+#					mesh_instance.set_surface_override_material(i, new_material)
 		"shader":
+			if not "res://" in effect_value: return
 			var shader = load(effect_value) as Shader
 			if shader:
 				var shader_material = ShaderMaterial.new()
 				shader_material.shader = shader
-				for i in range(mesh_instance.get_surface_override_material_count()):
-					mesh_instance.set_surface_override_material(i, shader_material)
-			else:
-				printerr("Impossible de charger le shader depuis le chemin: ", effect_value)
+				mesh_instance.material_overlay = shader_material
 
 func find_mesh_recursively(node: Node) -> MeshInstance3D:
 	if node is MeshInstance3D: return node

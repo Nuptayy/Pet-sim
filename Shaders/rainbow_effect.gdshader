@@ -1,18 +1,21 @@
-// Indique que c'est un shader pour les objets 3D et qu'on va modifier les matériaux spatiaux.
+// rainbow_effect.gdshader
 shader_type spatial;
 
-// Cette fonction s'exécute pour chaque pixel visible de l'objet.
+// On indique que ce shader va se mélanger avec ce qui est en dessous.
+render_mode blend_mix;
+
 void fragment() {
-  // TIME est une variable intégrée qui contient le temps de jeu en secondes.
-  // On le multiplie pour accélérer le changement de couleur.
-  float time_fast = TIME * 2.0;
+	// On génère notre onde de couleur arc-en-ciel.
+	float speed = 1.0;
+	float red   = sin(TIME * speed + 0.0) * 0.5 + 0.5;
+	float green = sin(TIME * speed + 2.0) * 0.5 + 0.5;
+	float blue  = sin(TIME * speed + 4.0) * 0.5 + 0.5;
+	vec3 rainbow_color = vec3(red, green, blue);
 
-  // On utilise la fonction cosinus pour créer une onde douce qui va de -1 à 1.
-  // On décale la phase pour chaque couleur (R, G, B) pour qu'elles ne changent pas en même temps.
-  float red   = cos(time_fast + 0.0) * 0.5 + 0.5; // * 0.5 + 0.5 pour passer de [-1, 1] à [0, 1]
-  float green = cos(time_fast + 2.0) * 0.5 + 0.5; // 2.0 est le décalage de phase pour le vert
-  float blue  = cos(time_fast + 4.0) * 0.5 + 0.5; // 4.0 est le décalage de phase pour le bleu
+	// ALBEDO est la couleur de notre calque.
+	ALBEDO = rainbow_color;
 
-  // ALBEDO est la couleur de base de l'objet. On lui assigne notre nouvelle couleur arc-en-ciel.
-  ALBEDO = vec3(red, green, blue);
+	// ALPHA est l'opacité de notre calque.
+	// 0.3 signifie qu'on voit 30% de la teinte dorée et 70% de la texture originale.
+	ALPHA = 0.3;
 }

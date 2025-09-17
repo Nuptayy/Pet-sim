@@ -25,8 +25,8 @@ var rarities = {
 
 # 🔹 Définition des types de pet (Classic, Golden, etc.).
 var pet_types = [
-	{"name": "Classic", "chance": 88.89, "effect_type": "none",   "value": null,       "order": 0, "stat_multiplier": 1.0},
-	{"name": "Golden",  "chance": 10.0,  "effect_type": "color",  "value": Color.GOLD, "order": 1, "stat_multiplier": 1.5},
+	{"name": "Classic", "chance": 88.89, "effect_type": "none",   "value": null,                                    "order": 0, "stat_multiplier": 1.0},
+	{"name": "Golden",  "chance": 10.0,  "effect_type": "shader", "value": "res://Shaders/golden_effect.gdshader",  "order": 1, "stat_multiplier": 1.5},
 	{"name": "Rainbow", "chance": 1.0,   "effect_type": "shader", "value": "res://Shaders/rainbow_effect.gdshader", "order": 2, "stat_multiplier": 2.0},
 	{"name": "Glitch",  "chance": 0.1,   "effect_type": "shader", "value": "res://Shaders/glitch_effect.gdshader",  "order": 3, "stat_multiplier": 5.0},
 	{"name": "Virus",   "chance": 0.01,  "effect_type": "shader", "value": "res://Shaders/virus_effect.gdshader",   "order": 4, "stat_multiplier": 10.0}
@@ -37,7 +37,7 @@ var pet_definitions = {
 	"Cat":    {"base_stats": {"Power": 1, "LuckBoost": 1.0, "SpeedBoost": 1.0}, "rarity": "Common",    "chance": 50.0,   "model": preload("res://Assets/Pets/cat/Cat.glb")},
 	"Rabbit": {"base_stats": {"Power": 2, "LuckBoost": 1.1, "SpeedBoost": 1.0}, "rarity": "Uncommon",  "chance": 30.0,   "model": preload("res://Assets/Pets/Rabbit/Untitled.glb")},
 	"Bee":    {"base_stats": {"Power": 5, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Epic",      "chance": 15.0,   "model": preload("res://Assets/Pets/bee/Bee.glb")},
-	"Test1":  {"base_stats": {"Power": 3, "LuckBoost": 1.15,"SpeedBoost": 1.05},"rarity": "Rare",      "chance": 4.9989, "model": preload("res://Assets/Egg.glb")},
+	"Test1":  {"base_stats": {"Power": 3, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Rare",      "chance": 4.9989, "model": preload("res://Assets/Egg.glb")},
 	"Test2":  {"base_stats": {"Power": 10,"LuckBoost": 1.5, "SpeedBoost": 1.2}, "rarity": "Legendary", "chance": 0.001,  "model": preload("res://Assets/Egg.glb")},
 	"Test3":  {"base_stats": {"Power": 25,"LuckBoost": 2.0, "SpeedBoost": 1.5}, "rarity": "Mythic",    "chance": 0.0001, "model": preload("res://Assets/Egg.glb")}
 }

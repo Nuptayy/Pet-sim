@@ -92,32 +92,31 @@ func format_chance(chance_percent: float) -> String:
 	if denominator > 1000: return "%.1fK" % (denominator / 1000.0)
 	return str(round(denominator))
 
+# 🔹 Applique l'effet visuel au modèle de pet dans le slot.
 func apply_preview_effect(pet_node: Node3D, type_info: Dictionary):
 	var mesh_instance = find_mesh_recursively(pet_node)
-	if not mesh_instance:
-		printerr("Preview: Impossible de trouver un MeshInstance3D pour le pet.")
-		return
+	if not mesh_instance: return
+	mesh_instance.material_override = null
+	mesh_instance.material_overlay = null
 	var effect_type = type_info["effect_type"]
 	var effect_value = type_info["value"]
+	
 	match effect_type:
 		"none": pass
-		"color":
-			for i in range(mesh_instance.get_surface_override_material_count()):
-				var original_material = mesh_instance.get_surface_override_material(i)
-				var new_material = original_material.duplicate() if original_material else StandardMaterial3D.new()
-				if new_material is StandardMaterial3D:
-					new_material.albedo_color = effect_value
-					mesh_instance.set_surface_override_material(i, new_material)
+#		"color":
+#			for i in range(mesh_instance.get_surface_override_material_count()):
+#				var original_material = mesh_instance.get_active_material(i)
+#				var new_material = original_material.duplicate(true) if original_material else StandardMaterial3D.new()
+#				if new_material is StandardMaterial3D:
+#					new_material.albedo_color = effect_value
+#					mesh_instance.set_surface_override_material(i, new_material)
 		"shader":
 			if not "res://" in effect_value: return
 			var shader = load(effect_value) as Shader
 			if shader:
 				var shader_material = ShaderMaterial.new()
 				shader_material.shader = shader
-				for i in range(mesh_instance.get_surface_override_material_count()):
-					mesh_instance.set_surface_override_material(i, shader_material)
-			else:
-				printerr("Preview: Impossible de charger le shader: ", effect_value)
+				mesh_instance.material_overlay = shader_material
 
 func find_mesh_recursively(node: Node) -> MeshInstance3D:
 	if node is MeshInstance3D: return node
