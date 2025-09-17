@@ -97,8 +97,8 @@ func format_chance(chance_percent: float) -> String:
 	if chance_percent <= 0: return "∞"
 	if chance_percent >= 1.0: return str(round(100.0 / chance_percent))
 	var denominator = 1.0 / (chance_percent / 100.0)
-	if denominator > 1000000: return "%.1fM" % (denominator / 1000000.0)
-	if denominator > 1000: return "%.1fK" % (denominator / 1000.0)
+	if denominator >= 1000000.0: return "%.1fM" % (denominator / 1000000.0)
+	if denominator >= 1000.0: return "%.1fK" % (denominator / 1000.0)
 	return str(round(denominator))
 
 # 🔹 Applique l'effet visuel au modèle de pet dans le slot.

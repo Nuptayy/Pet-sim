@@ -6,7 +6,7 @@ extends Node
 @export var Luck = 1.0
 @export var Speed = 1.0
 @export var global_egg_scale_multiplier = 0.65
-@export var low_tier_rarities: Array[String] = ["Common", "Uncommon", "Rare", "Legendary"]
+@export var low_tier_rarities: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 
 # 🔹 Variables internes
 var IsHatching = false
