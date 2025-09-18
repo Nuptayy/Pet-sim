@@ -1,0 +1,143 @@
+[gd_scene load_steps=3 format=3 uid="uid://byy2lyg2d1wor"]
+
+[ext_resource type="Script" uid="uid://d2s0n3cdhgwqu" path="res://Scripts/StatsPage.gd" id="1_4tcc3"]
+
+[sub_resource type="FontVariation" id="FontVariation_4tcc3"]
+variation_embolden = 1.0
+
+[node name="StatsPage" type="PanelContainer"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -151.5
+offset_top = -187.0
+offset_right = 151.5
+offset_bottom = 187.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_4tcc3")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_fonts/font = SubResource("FontVariation_4tcc3")
+text = "Statistiques"
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="StatsGrid" type="GridContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 20
+columns = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Temps de jeu :"
+
+[node name="TimePlayedLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "00:00:00"
+
+[node name="Label3" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Œufs ouverts :"
+
+[node name="EggsHatchedLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0"
+
+[node name="Label5" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Chance actuelle :"
+
+[node name="CurrentLuckLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "x1.0"
+
+[node name="Label7" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Vitesse d'éclosion :"
+
+[node name="HatchSpeedLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "1s"
+
+[node name="Label9" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Coins gagnés :"
+
+[node name="TotalCoinsLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0"
+
+[node name="Label10" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Gems gagnés :"
+
+[node name="TotalGemsLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0"
+
+[node name="Label12" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Pet le plus rare :"
+
+[node name="RarestPetLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "N/A"
+
+[node name="Label14" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Coins par seconde :"
+
+[node name="CoinsPerSecondLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0"
+
+[node name="Label16" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Chance de Gem par sec :"
+
+[node name="GemsPerSecondLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0"
+
+[node name="Label18" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+layout_mode = 2
+text = "Index complété :"
+
+[node name="IndexCompletionLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "0%"
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Retour"

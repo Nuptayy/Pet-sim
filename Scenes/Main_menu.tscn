@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://cx52kctowroet"]
+[gd_scene load_steps=4 format=3 uid="uid://cx52kctowroet"]
 
 [ext_resource type="Script" uid="uid://xtiyvuc5qn3y" path="res://Scripts/main_menu.gd" id="1_7sp8y"]
+[ext_resource type="PackedScene" uid="uid://803rb821f540" path="res://Scenes/OptionsMenu.tscn" id="2_pc006"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_siod4"]
 corner_radius_top_left = 16
@@ -17,7 +18,8 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_7sp8y")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="MainButtons" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -32,27 +34,36 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 20
 
-[node name="StartButton" type="Button" parent="VBoxContainer"]
+[node name="StartButton" type="Button" parent="MainButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 theme_override_styles/focus = SubResource("StyleBoxFlat_siod4")
 text = "Start game"
 
-[node name="OptionsButton" type="Button" parent="VBoxContainer"]
+[node name="OptionsButton" type="Button" parent="MainButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 theme_override_styles/focus = SubResource("StyleBoxFlat_siod4")
 text = "Options	"
 
-[node name="ExitButton" type="Button" parent="VBoxContainer"]
+[node name="ExitButton" type="Button" parent="MainButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 theme_override_styles/focus = SubResource("StyleBoxFlat_siod4")
 text = "Exit"
 
-[connection signal="pressed" from="VBoxContainer/StartButton" to="." method="_on_playgame_pressed"]
-[connection signal="pressed" from="VBoxContainer/OptionsButton" to="." method="_on_options_pressed"]
-[connection signal="pressed" from="VBoxContainer/ExitButton" to="." method="_on_exit_pressed"]
+[node name="OptionsMenu" parent="." instance=ExtResource("2_pc006")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+offset_left = -131.5
+offset_top = -138.0
+offset_right = 131.5
+offset_bottom = 138.0
+
+[connection signal="pressed" from="MainButtons/StartButton" to="." method="_on_playgame_pressed"]
+[connection signal="pressed" from="MainButtons/OptionsButton" to="." method="_on_options_pressed"]
+[connection signal="pressed" from="MainButtons/ExitButton" to="." method="_on_exit_pressed"]

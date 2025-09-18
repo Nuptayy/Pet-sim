@@ -10,17 +10,26 @@ extends Node
 
 # 🔹 Initialisation du jeu.
 func _ready():
-	pause_menu.process_mode = Node.PROCESS_MODE_ALWAYS
+	hatching_screen.setup(hatching_logic)
+	
+	var options_menu_instance = pause_menu.get_node("OptionsMenu")
+	if options_menu_instance:
+		options_menu_instance.graphic_settings_changed.connect(apply_quality_setting)
+	
 	pause_menu.continue_game.connect(toggle_pause)
 	pause_menu.return_to_main_menu.connect(on_return_to_main_menu)
-	hatching_screen.setup(hatching_logic)
+	
 	hatching_screen.hatch_requested.connect(on_hatch_requested)
 	inventory_screen.close_requested.connect(func(): set_game_state("hatching"))
 	hatching_logic.animation_started.connect(func(): set_game_state("animating"))
 	hatching_logic.animation_finished.connect(func(): set_game_state("hatching"))
+	
 	hatching_logic.camera = hatching_animation_scene.get_node("Camera3D")
 	hatching_logic.egg_grid_container = hatching_animation_scene.get_node("EggGridContainer")
 	hatching_logic.viewport_container = get_viewport()
+	
+	apply_quality_setting(SaveManager.current_settings["quality_index"])
+	
 	set_game_state("hatching")
 
 # 🔹 Gère les entrées du joueur.
@@ -62,16 +71,37 @@ func _input(event):
 
 # 🔹 Fonction pour mettre en pause ou reprendre le jeu.
 func toggle_pause():
-	# On inverse l'état de la pause.
 	get_tree().paused = not get_tree().paused
-	# On dit au menu de pause de s'afficher ou de se cacher.
 	pause_menu.set_paused(get_tree().paused)
 
 # 🔹 Fonction pour retourner au menu principal.
 func on_return_to_main_menu():
-	# On s'assure que le jeu n'est plus en pause avant de changer de scène.
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://Scenes/Main_menu.tscn")
+
+# 🔹 Applique les préréglages de qualité graphique au monde 3D.
+func apply_quality_setting(index: int):
+	var world_3d = get_viewport().world_3d
+	if not world_3d: return
+	var env: Environment = world_3d.environment
+	if not env: 
+		print("AVERTISSEMENT: Aucun WorldEnvironment trouvé pour appliquer les paramètres de qualité.")
+		return
+
+	match index:
+		0: # Basse
+			env.ssao_enabled = false
+			env.ssil_enabled = false
+			get_viewport().msaa_3d = Viewport.MSAA_DISABLED
+		1: # Moyenne
+			env.ssao_enabled = true
+			env.ssil_enabled = false
+			get_viewport().msaa_3d = Viewport.MSAA_2X
+		2: # Haute
+			env.ssao_enabled = true
+			env.ssil_enabled = true
+			get_viewport().msaa_3d = Viewport.MSAA_4X
+	print("Paramètres de qualité appliqués (Index: %d)" % index)
 
 # 🔹 Fonction centrale qui reçoit TOUTES les demandes d'éclosion.
 func on_hatch_requested(egg_name: String, count: int):

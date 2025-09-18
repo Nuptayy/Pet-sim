@@ -58,6 +58,19 @@ var egg_definitions = [
 	}
 ]
 
+# 🔹 NOUVELLES DONNÉES DE JOUEUR
+var coins: float = 0.0
+var gems: int = 0
+var time_played: int = 0
+var eggs_hatched: int = 0
+var total_coins_earned: float = 0.0
+var total_gems_earned: int = 0
+var equipped_pets: Array[int] = [] # Stocke les unique_id des pets équipés
+var discovered_pets: Dictionary = {} # Stocke les noms des pets découverts
+
+# --- Options du joueur (seront chargées depuis la sauvegarde) ---
+var option_confirm_delete = true
+
 # 🔹 Inventaire réel du joueur.
 var player_inventory: Array[Dictionary] = []
 var next_pet_unique_id = 0
@@ -93,3 +106,41 @@ func calculate_final_stats(pet_base_name: String, pet_type_info: Dictionary) -> 
 	for stat_name in base_stats:
 		base_stats[stat_name] *= multiplier
 	return base_stats
+
+func _process(delta):
+	time_played += delta
+	var coins_this_frame = get_coins_per_second() * delta
+	coins += coins_this_frame
+	total_coins_earned += coins_this_frame
+	
+	# Chance de gagner des gems
+	if get_gems_per_second_chance() > 0:
+		if randf() < (get_gems_per_second_chance() / 100.0) * delta:
+			gems += 1
+			total_gems_earned += 1
+
+# --- Fonctions "Get" pour que l'UI puisse lire les données ---
+func get_total_luck_boost() -> float:
+	# TODO: Calculer en fonction des pets équipés
+	return 1.0
+
+func get_total_speed_boost() -> float:
+	# TODO: Calculer en fonction des pets équipés
+	return 1.0
+
+func get_coins_per_second() -> float:
+	var base_rate = 1.0
+	# TODO: Multiplier par le bonus des pets équipés
+	return base_rate
+
+func get_gems_per_second_chance() -> float:
+	# TODO: Calculer en fonction des pets équipés
+	return 0.0
+
+func get_rarest_pet_owned() -> Dictionary:
+	# TODO: Logique pour trouver le pet le plus rare dans player_inventory
+	return {}
+
+func get_index_completion() -> float:
+	# TODO: Calculer le pourcentage de pets découverts
+	return 0.0

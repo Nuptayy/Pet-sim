@@ -11,13 +11,14 @@ config_version=5
 [application]
 
 config/name="egg openning simulator"
-run/main_scene="uid://cx52kctowroet"
+run/main_scene="uid://dwe0kh83cw0a"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
 DataManager="*res://Scripts/DataManager.gd"
+SaveManager="*res://Scripts/SaveManager.gd"
 
 [display]
 
