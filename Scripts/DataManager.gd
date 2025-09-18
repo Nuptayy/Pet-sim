@@ -75,6 +75,10 @@ var option_confirm_delete = true
 var player_inventory: Array[Dictionary] = []
 var next_pet_unique_id = 0
 
+# 🔹 Interrupteur pour la progression du jeu
+var progression_is_active = false
+var one_second_timer: Timer
+
 # 🔹 Ajoute un pet UNIQUE à l'inventaire du joueur.
 func add_pet_to_inventory(pet_base_name: String, pet_type_info: Dictionary):
 	var new_pet_instance = {"unique_id": next_pet_unique_id, "base_name": pet_base_name, "type": pet_type_info, "stats": calculate_final_stats(pet_base_name, pet_type_info)}
@@ -107,17 +111,21 @@ func calculate_final_stats(pet_base_name: String, pet_type_info: Dictionary) -> 
 		base_stats[stat_name] *= multiplier
 	return base_stats
 
-func _process(delta):
-	time_played += delta
-	var coins_this_frame = get_coins_per_second() * delta
-	coins += coins_this_frame
-	total_coins_earned += coins_this_frame
+func _ready():
+	one_second_timer = Timer.new()
+	one_second_timer.wait_time = 1.0
+	one_second_timer.autostart = true
+	one_second_timer.timeout.connect(on_one_second_tick)
+	add_child(one_second_timer)
+
+func on_one_second_tick():
+	if not progression_is_active:
+		return
 	
-	# Chance de gagner des gems
-	if get_gems_per_second_chance() > 0:
-		if randf() < (get_gems_per_second_chance() / 100.0) * delta:
-			gems += 1
-			total_gems_earned += 1
+	time_played += 1
+	var coins_this_tick = get_coins_per_second()
+	coins += coins_this_tick
+	total_coins_earned += coins_this_tick
 
 # --- Fonctions "Get" pour que l'UI puisse lire les données ---
 func get_total_luck_boost() -> float:
@@ -138,9 +146,34 @@ func get_gems_per_second_chance() -> float:
 	return 0.0
 
 func get_rarest_pet_owned() -> Dictionary:
-	# TODO: Logique pour trouver le pet le plus rare dans player_inventory
-	return {}
+	if player_inventory.is_empty():
+		return {}
+
+	var rarest_pet_so_far = player_inventory[0]
+	var rarest_order = rarities[pet_definitions[rarest_pet_so_far["base_name"]]["rarity"]]["order"]
+
+	for i in range(1, player_inventory.size()):
+		var current_pet = player_inventory[i]
+		var current_order = rarities[pet_definitions[current_pet["base_name"]]["rarity"]]["order"]
+		if current_order > rarest_order:
+			rarest_pet_so_far = current_pet
+			rarest_order = current_order
+			
+	return rarest_pet_so_far
 
 func get_index_completion() -> float:
-	# TODO: Calculer le pourcentage de pets découverts
-	return 0.0
+	if pet_definitions.size() == 0:
+		return 0.0
+	
+	var discovered_count = discovered_pets.size()
+	var total_pets = pet_definitions.size()
+	return (float(discovered_count) / float(total_pets)) * 100.0
+
+# 🔹 Met à jour le nombre d'œufs ouverts.
+func increment_eggs_hatched(amount: int):
+	eggs_hatched += amount
+
+# 🔹 Marque un pet comme découvert.
+func discover_pet(pet_name: String):
+	if not discovered_pets.has(pet_name):
+		discovered_pets[pet_name] = true

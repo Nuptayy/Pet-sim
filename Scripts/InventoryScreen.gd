@@ -4,6 +4,7 @@ extends PanelContainer
 signal close_requested
 
 const PET_SLOT_SCENE = preload("res://Scenes/PetSlot.tscn")
+const CONFIRMATION_DIALOG_SCENE = preload("res://Scenes/ConfirmationDialog.tscn")
 var current_selected_pet_id = -1
 
 # 🔹 Références aux nœuds de l'interface (utilisez la notation % pour plus de sécurité).
@@ -79,9 +80,23 @@ func display_pet_details(pet_id: int):
 	apply_preview_effect(pet_model, pet_data["type"])
 
 func _on_delete_pressed():
+	if current_selected_pet_id == -1: return
+
+	# Si l'option est désactivée, on supprime directement.
+	if not SaveManager.current_settings["confirm_delete"]:
+		delete_current_pet()
+		return
+		
+	var dialog = CONFIRMATION_DIALOG_SCENE.instantiate()
+	add_child(dialog)
+	
+	dialog.confirmed.connect(delete_current_pet)
+	dialog.popup_centered()
+
+func delete_current_pet():
 	if current_selected_pet_id != -1:
 		DataManager.remove_pet_by_id(current_selected_pet_id)
-		%DetailsPanel.visible = false
+		details_panel.visible = false
 		current_selected_pet_id = -1
 
 func _update_total_count(new_count: int):

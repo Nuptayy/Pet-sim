@@ -5,6 +5,7 @@ extends Control
 @onready var main_buttons = %MainButtons
 
 func _ready():
+	DataManager.progression_is_active = false
 	options_menu.hide()
 	%StartButton.pressed.connect(on_playgame_pressed)
 	%OptionsButton.pressed.connect(on_options_pressed)

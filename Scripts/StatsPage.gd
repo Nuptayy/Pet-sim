@@ -28,8 +28,9 @@ func update_all_stats():
 	%HatchSpeedLabel.text = "%.2f s" % (1.0 / DataManager.get_total_speed_boost())
 	
 	# Monnaies
-	%TotalCoinsLabel.text = str(DataManager.total_coins_earned)
+	%TotalCoinsLabel.text = str(int(DataManager.total_coins_earned))
 	%TotalGemsLabel.text = str(DataManager.total_gems_earned)
+	%CoinsPerSecondLabel.text = "%.2f/s" % DataManager.get_coins_per_second()
 	
 	# Pet le plus rare
 	var rarest = DataManager.get_rarest_pet_owned()

@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://bxq6a5jxi6p08"]
+
+[node name="ConfirmationDialog" type="ConfirmationDialog"]
+oversampling_override = 1.0
+title = "Confirmation"
+ok_button_text = "Delete"
+dialog_text = "Êtes-vous sûr de vouloir supprimer ce pet ?"

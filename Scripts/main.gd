@@ -10,6 +10,7 @@ extends Node
 
 # 🔹 Initialisation du jeu.
 func _ready():
+	DataManager.progression_is_active = true
 	hatching_screen.setup(hatching_logic)
 	
 	var options_menu_instance = pause_menu.get_node("OptionsMenu")
