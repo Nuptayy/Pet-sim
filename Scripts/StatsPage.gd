@@ -16,7 +16,7 @@ func _on_visibility_changed():
 func update_all_stats():
 	# Temps de jeu
 	var total_seconds = DataManager.time_played
-	%TimePlayedLabel.text = "%02d:%02d:%02d" % [total_seconds / 3600, (total_seconds % 3600) / 60, total_seconds % 60]
+	%TimePlayedLabel.text = format_seconds_to_hms(total_seconds)
 	
 	# Œufs ouverts
 	%EggsHatchedLabel.text = str(DataManager.eggs_hatched)
@@ -48,6 +48,16 @@ func update_all_stats():
 	
 	# Index
 	%IndexCompletionLabel.text = "%.1f%%" % DataManager.get_index_completion()
+
+# 🔹 Formate un nombre de secondes en H:M:S.
+func format_seconds_to_hms(seconds: int) -> String:
+	# On utilise la fonction floor() pour être explicite qu'on veut un entier.
+	# floor(x / y) est l'équivalent sûr de la division entière.
+	var h = floor(float(seconds) / 3600.0)
+	var m = floor(float(seconds % 3600) / 60.0)
+	var s = seconds % 60
+	
+	return "%02d:%02d:%02d" % [h, m, s]
 
 # 🔹 Ajout d'une fonction de formatage dans ce script aussi.
 func format_chance(chance_percent: float) -> String:
