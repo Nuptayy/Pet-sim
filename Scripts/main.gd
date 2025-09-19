@@ -78,7 +78,13 @@ func toggle_pause():
 # 🔹 Fonction pour retourner au menu principal.
 func on_return_to_main_menu():
 	get_tree().paused = false
+	SaveManager.save_all()
 	get_tree().change_scene_to_file("res://Scenes/Main_menu.tscn")
+
+func _notification(what):
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		SaveManager.save_all()
+		get_tree().quit()
 
 # 🔹 Applique les préréglages de qualité graphique au monde 3D.
 func apply_quality_setting(index: int):

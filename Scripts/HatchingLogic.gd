@@ -53,7 +53,8 @@ func auto_hatch_loop(egg_name: String):
 func hatch_eggs(egg_name: String, count: int):
 	if IsHatching: return
 	IsHatching = true
-	animation_started.emit() # Informe le Main.gd de montrer l'écran d'animation
+	DataManager.increment_eggs_hatched(count)
+	animation_started.emit()
 	await get_tree().process_frame
 	
 	for instance in active_hatch_instances:

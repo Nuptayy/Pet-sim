@@ -6,6 +6,8 @@ extends Node
 signal inventory_updated
 signal total_pet_count_changed(new_count)
 
+var autosave_timer: Timer
+
 # 🔹 Définition des raretés du jeu.
 var rarities = {
 	"Common":    {"color": Color.WHITE, "order": 0},
@@ -36,8 +38,8 @@ var pet_types = [
 var pet_definitions = {
 	"Cat":    {"base_stats": {"Power": 1, "LuckBoost": 1.0, "SpeedBoost": 1.0}, "rarity": "Common",   "model": preload("res://Assets/Pets/cat/Cat.glb")},
 	"Rabbit": {"base_stats": {"Power": 2, "LuckBoost": 1.1, "SpeedBoost": 1.0}, "rarity": "Uncommon", "model": preload("res://Assets/Pets/Rabbit/Untitled.glb")},
-	"Bee":    {"base_stats": {"Power": 5, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Epic",     "model": preload("res://Assets/Pets/bee/Bee.glb")},
-	"Test1":  {"base_stats": {"Power": 3, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Rare",     "model": preload("res://Assets/Egg.glb")},
+	"Bee":    {"base_stats": {"Power": 5, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Rare",     "model": preload("res://Assets/Pets/bee/Bee.glb")},
+	"Test1":  {"base_stats": {"Power": 3, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Epic",     "model": preload("res://Assets/Egg.glb")},
 	"Test2":  {"base_stats": {"Power": 10,"LuckBoost": 1.5, "SpeedBoost": 1.2}, "rarity": "Legendary","model": preload("res://Assets/Egg.glb")},
 	"Test3":  {"base_stats": {"Power": 25,"LuckBoost": 2.0, "SpeedBoost": 1.5}, "rarity": "Mythic",   "model": preload("res://Assets/Egg.glb")}
 }
@@ -81,9 +83,15 @@ var one_second_timer: Timer
 
 # 🔹 Ajoute un pet UNIQUE à l'inventaire du joueur.
 func add_pet_to_inventory(pet_base_name: String, pet_type_info: Dictionary):
-	var new_pet_instance = {"unique_id": next_pet_unique_id, "base_name": pet_base_name, "type": pet_type_info, "stats": calculate_final_stats(pet_base_name, pet_type_info)}
+	var new_pet_instance = {
+		"unique_id": next_pet_unique_id,
+		"base_name": pet_base_name,
+		"type": pet_type_info,
+		"stats": calculate_final_stats(pet_base_name, pet_type_info)
+	}
 	player_inventory.append(new_pet_instance)
 	next_pet_unique_id += 1
+	discover_pet(pet_base_name)
 	inventory_updated.emit()
 	total_pet_count_changed.emit(player_inventory.size())
 
@@ -117,6 +125,12 @@ func _ready():
 	one_second_timer.autostart = true
 	one_second_timer.timeout.connect(on_one_second_tick)
 	add_child(one_second_timer)
+	
+	autosave_timer = Timer.new()
+	autosave_timer.wait_time = 60.0
+	autosave_timer.autostart = true
+	autosave_timer.timeout.connect(SaveManager.save_all)
+	add_child(autosave_timer)
 
 func on_one_second_tick():
 	if not progression_is_active:
@@ -145,19 +159,43 @@ func get_gems_per_second_chance() -> float:
 	# TODO: Calculer en fonction des pets équipés
 	return 0.0
 
+# 🔹 Calcule la chance combinée (en %) d'obtenir un pet spécifique avec son type.
+func get_combined_chance(pet_instance: Dictionary) -> float:
+	if pet_instance.is_empty():
+		return 100.0
+	
+	var pet_base_name = pet_instance["base_name"]
+	var pet_type_info = pet_instance["type"]
+	
+	# Récupère la chance de base du pet (depuis le premier œuf, pour l'instant).
+	# Note : cette partie devra être améliorée si vous voulez la chance exacte de l'œuf d'origine.
+	var base_pet_chance = 100.0
+	if not egg_definitions.is_empty():
+		for pet_in_egg in egg_definitions[0]["pets"]:
+			if pet_in_egg["name"] == pet_base_name:
+				base_pet_chance = pet_in_egg["chance"]
+				break
+	
+	if pet_type_info["name"] == "Classic":
+		return base_pet_chance
+	else:
+		var type_chance = pet_type_info["chance"]
+		# Formule: (chance_pet / 100) * (chance_type / 100) * 100
+		return base_pet_chance * type_chance / 100.0
+
 func get_rarest_pet_owned() -> Dictionary:
 	if player_inventory.is_empty():
 		return {}
-
+	
 	var rarest_pet_so_far = player_inventory[0]
-	var rarest_order = rarities[pet_definitions[rarest_pet_so_far["base_name"]]["rarity"]]["order"]
-
+	var rarest_chance = get_combined_chance(rarest_pet_so_far)
+	
 	for i in range(1, player_inventory.size()):
 		var current_pet = player_inventory[i]
-		var current_order = rarities[pet_definitions[current_pet["base_name"]]["rarity"]]["order"]
-		if current_order > rarest_order:
+		var current_chance = get_combined_chance(current_pet)
+		if current_chance < rarest_chance:
 			rarest_pet_so_far = current_pet
-			rarest_order = current_order
+			rarest_chance = current_chance
 			
 	return rarest_pet_so_far
 

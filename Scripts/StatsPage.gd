@@ -33,9 +33,12 @@ func update_all_stats():
 	%CoinsPerSecondLabel.text = "%.2f/s" % DataManager.get_coins_per_second()
 	
 	# Pet le plus rare
-	var rarest = DataManager.get_rarest_pet_owned()
-	if not rarest.is_empty():
-		%RarestPetLabel.text = "%s (%s)" % [rarest["base_name"], rarest["type"]["name"]]
+	var rarest_pet = DataManager.get_rarest_pet_owned()
+	if not rarest_pet.is_empty():
+		var combined_chance = DataManager.get_combined_chance(rarest_pet)
+		var pet_text = "%s (%s)" % [rarest_pet["base_name"], rarest_pet["type"]["name"]]
+		var chance_text = "(%s)" % format_chance(combined_chance)
+		%RarestPetLabel.text = "%s\n%s" % [pet_text, chance_text]
 	else:
 		%RarestPetLabel.text = "N/A"
 	
@@ -45,3 +48,29 @@ func update_all_stats():
 	
 	# Index
 	%IndexCompletionLabel.text = "%.1f%%" % DataManager.get_index_completion()
+
+# 🔹 Ajout d'une fonction de formatage dans ce script aussi.
+func format_chance(chance_percent: float) -> String:
+	if chance_percent <= 0:
+		return "∞"
+	
+	if chance_percent >= 1.0:
+		# "%.2f" pour garder deux décimales, "%%" pour afficher le caractère '%'.
+		return "%.2f%%" % chance_percent
+	
+	var denominator = 1.0 / (chance_percent / 100.0)
+	
+	if denominator >= 1_000_000_000_000.0:
+		return "1 in %.1fT" % (denominator / 1_000_000_000_000.0)
+	
+	elif denominator >= 1_000_000_000.0:
+		return "1 in %.1fB" % (denominator / 1_000_000_000.0)
+	
+	elif denominator >= 1_000_000.0:
+		return "1 in %.1fM" % (denominator / 1_000_000.0)
+	
+	elif denominator >= 1_000.0:
+		return "1 in %.1fK" % (denominator / 1_000.0)
+	
+	else:
+		return "1 in %d" % round(denominator)

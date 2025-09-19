@@ -63,7 +63,7 @@ func display_pet_details(pet_id: int):
 			if pet_info["name"] == pet_base_name:
 				display_chance = pet_info["chance"]
 				break
-	%ChanceLabel.text = "(1 in %s)" % format_chance(display_chance)
+	%ChanceLabel.text = "(%s)" % format_chance(display_chance)
 	%PowerLabel.text = "Power: %s" % pet_data["stats"]["Power"]
 	%LuckBoostLabel.text = "Luck Boost: x%s" % pet_data["stats"]["LuckBoost"]
 	%SpeedBoostLabel.text = "Speed Boost: x%s" % pet_data["stats"]["SpeedBoost"]
@@ -107,12 +107,29 @@ func _process(delta):
 		%PetHolder.get_child(0).rotate_y(delta * 0.5)
 
 func format_chance(chance_percent: float) -> String:
-	if chance_percent <= 0: return "∞"
-	if chance_percent >= 1.0: return str(round(100.0 / chance_percent))
+	if chance_percent <= 0:
+		return "∞"
+	
+	if chance_percent >= 1.0:
+		# "%.2f" pour garder deux décimales, "%%" pour afficher le caractère '%'.
+		return "%.2f%%" % chance_percent
+	
 	var denominator = 1.0 / (chance_percent / 100.0)
-	if denominator >= 1000000.0: return "%.1fM" % (denominator / 1000000.0)
-	if denominator >= 1000.0: return "%.1fK" % (denominator / 1000.0)
-	return str(round(denominator))
+	
+	if denominator >= 1_000_000_000_000.0:
+		return "1 in %.1fT" % (denominator / 1_000_000_000_000.0)
+	
+	elif denominator >= 1_000_000_000.0:
+		return "1 in %.1fB" % (denominator / 1_000_000_000.0)
+	
+	elif denominator >= 1_000_000.0:
+		return "1 in %.1fM" % (denominator / 1_000_000.0)
+	
+	elif denominator >= 1_000.0:
+		return "1 in %.1fK" % (denominator / 1_000.0)
+	
+	else:
+		return "1 in %d" % round(denominator)
 
 # 🔹 Applique l'effet visuel au modèle de pet dans le slot.
 func apply_preview_effect(pet_node: Node3D, type_info: Dictionary):
