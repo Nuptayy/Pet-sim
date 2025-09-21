@@ -15,7 +15,7 @@ general/quality/use_taa=false
 [application]
 
 config/name="egg openning simulator"
-run/main_scene="uid://dwe0kh83cw0a"
+run/main_scene="uid://73kfiebexev1"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 config/main_scene="uid://dwe0kh83cw0a"
