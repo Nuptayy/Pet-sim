@@ -4,7 +4,6 @@ extends Node
 # 🔹 Paramètres de jeu, configurables depuis l'inspecteur
 @export var NumberOfEggMax = 12
 @export var Luck = 1.0
-@export var Speed = 1.0
 @export var global_egg_scale_multiplier = 0.65
 @export var low_tier_rarities: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 
@@ -72,8 +71,8 @@ func hatch_eggs(egg_name: String, count: int):
 	for pet_data in pets_to_hatch:
 		DataManager.add_pet_to_inventory(pet_data["base_name"], pet_data["type"])
 	
-	var safe_speed = max(Speed, 1.0)
-	await get_tree().create_timer(1.5 / safe_speed).timeout
+	var safe_speed = max(DataManager.get_total_speed_boost(), 1.0)
+	await get_tree().create_timer(0.25 / safe_speed).timeout
 	
 	for instance in active_hatch_instances:
 		if is_instance_valid(instance.node): instance.node.queue_free()
@@ -223,9 +222,9 @@ func place_eggs_on_grid(pets_data: Array, egg_name: String):
 # 🔹 Joue la cinématique de balancement et de révélation
 func play_simultaneous_hatch_animation():
 	if active_hatch_instances.is_empty(): return
-	var safe_speed = max(Speed, 1.0)
+	var safe_speed = max(DataManager.get_total_speed_boost(), 1.0)
 	
-	var anim_duration = 1.0 / safe_speed
+	var anim_duration = 0.5 / safe_speed
 	var elapsed_time = 0.0
 	var swing_amount = 0.3
 	var swing_speed = 8.0
@@ -261,7 +260,7 @@ func play_simultaneous_hatch_animation():
 			
 			apply_visual_effect(pet_instance, pet_data["type"])
 			
-	await get_tree().create_timer(0.5 / safe_speed).timeout
+	await get_tree().create_timer(0.25 / safe_speed).timeout
 
 # --- Fonctions Utilitaires ---
 

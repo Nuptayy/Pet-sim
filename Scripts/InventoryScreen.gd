@@ -17,16 +17,18 @@ var current_selected_pet_id = -1
 @onready var pet_name_label: Label = %PetNameLabel
 @onready var rarity_label: Label = %RarityLabel
 @onready var chance_label: Label = %ChanceLabel
-@onready var power_label: Label = %PowerLabel
+@onready var coin_boost_label: Label = %CoinBoostLabel
 @onready var luck_boost_label: Label = %LuckBoostLabel
 @onready var speed_boost_label: Label = %SpeedBoostLabel
 
 func _ready():
 	%DetailsPanel.visible = false
 	%CloseButton.pressed.connect(func(): close_requested.emit())
+	%EquipButton.pressed.connect(on_equip_pressed)
 	%DeleteButton.pressed.connect(_on_delete_pressed)
 	DataManager.inventory_updated.connect(redraw_inventory)
 	DataManager.total_pet_count_changed.connect(_update_total_count)
+	DataManager.equipped_pets_changed.connect(redraw_inventory)
 	visibility_changed.connect(_on_visibility_changed)
 	redraw_inventory()
 	_update_total_count(DataManager.player_inventory.size())
@@ -59,9 +61,20 @@ func display_pet_details(pet_id: int):
 	var combined_chance = DataManager.get_combined_chance(pet_data)
 	%ChanceLabel.text = "(%s)" % format_chance(combined_chance)
 	
-	%PowerLabel.text = "Power: %s" % pet_data["stats"]["Power"]
+	%CoinBoostLabel.text = "Coin Boost: x%s" % pet_data["stats"]["CoinBoost"]
 	%LuckBoostLabel.text = "Luck Boost: x%s" % pet_data["stats"]["LuckBoost"]
 	%SpeedBoostLabel.text = "Speed Boost: x%s" % pet_data["stats"]["SpeedBoost"]
+	
+	var equip_button = %EquipButton
+	if pet_id in DataManager.equipped_pets:
+		equip_button.text = "Unequip"
+		equip_button.disabled = false
+	else:
+		equip_button.text = "Equip"
+		if DataManager.equipped_pets.size() >= DataManager.max_equipped_pets:
+			equip_button.disabled = true
+		else:
+			equip_button.disabled = false
 	
 	for child in pet_holder.get_children():
 		child.queue_free()
@@ -73,6 +86,16 @@ func display_pet_details(pet_id: int):
 		visual_node.layers = 4
 	
 	apply_preview_effect(pet_model, pet_data["type"])
+
+func on_equip_pressed():
+	if current_selected_pet_id == -1: return
+	
+	if current_selected_pet_id in DataManager.equipped_pets:
+		DataManager.unequip_pet(current_selected_pet_id)
+	else:
+		DataManager.equip_pet(current_selected_pet_id)
+	
+	display_pet_details(current_selected_pet_id)
 
 func _on_delete_pressed():
 	if current_selected_pet_id == -1: return

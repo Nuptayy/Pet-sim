@@ -2,54 +2,54 @@
 extends Button
 
 # 🔹 Configure ce slot avec les données d'un pet.
-# Cette fonction est maintenant la seule responsable de l'initialisation.
 func setup(pet_instance: Dictionary):
-	# On s'assure que les enfants du bouton sont prêts avant de continuer.
 	if not has_node("SubViewportContainer"):
-		# Si le SubViewportContainer n'est pas encore là, on attend la prochaine frame.
-		# C'est une sécurité pour éviter les crashs.
 		await get_tree().process_frame
 		if not has_node("SubViewportContainer"):
 			printerr("ERREUR CRITIQUE dans PetSlot: SubViewportContainer est manquant.")
 			return
-
+	
 	var sub_viewport = get_node("SubViewportContainer").get_child(0)
 	if sub_viewport.get_child_count() == 0:
 		await get_tree().process_frame
 		if sub_viewport.get_child_count() == 0:
 			printerr("ERREUR CRITIQUE dans PetSlot: La scène de preview est manquante dans le SubViewport.")
 			return
-
+	
 	var preview_scene = sub_viewport.get_child(0)
 	var pet_holder: Node3D = preview_scene.get_node("ObjectHolder")
 	
 	if not is_instance_valid(pet_holder):
 		printerr("ERREUR CRITIQUE dans PetSlot: ObjectHolder non trouvé.")
 		return
-		
-	# À partir d'ici, on est sûr que tout existe.
 	
-	# Vide le support.
 	for child in pet_holder.get_children():
 		child.queue_free()
-		
-	# Charge la définition du pet.
+	
 	var pet_base_name = pet_instance["base_name"]
 	if DataManager.pet_definitions.has(pet_base_name):
 		var pet_def = DataManager.pet_definitions[pet_base_name]
-		
-		# Instancie et ajoute le modèle.
 		var model = pet_def["model"].instantiate()
 		pet_holder.add_child(model)
-		
-		# Assigne le modèle à la bonne couche.
 		var visual_node = find_mesh_recursively(model)
 		if visual_node:
-			visual_node.layers = 4 # Couche 3 pour la preview de pet.
-		
-		# Applique les effets.
+			visual_node.layers = 4
 		apply_slot_effect(model, pet_instance["type"])
 	self.tooltip_text = pet_instance["base_name"] + " (" + pet_instance["type"]["name"] + ")"
+	
+	var is_equipped = pet_instance["unique_id"] in DataManager.equipped_pets
+	if is_equipped:
+		var equipped_style = StyleBoxFlat.new()
+		equipped_style.bg_color = Color(0.2, 0.2, 0.2)
+		equipped_style.border_width_top = 4
+		equipped_style.border_width_bottom = 4
+		equipped_style.border_width_left = 4
+		equipped_style.border_width_right = 4
+		equipped_style.border_color = Color.GREEN
+		
+		add_theme_stylebox_override("normal", equipped_style)
+	else:
+		remove_theme_stylebox_override("normal")
 
 # 🔹 Applique l'effet visuel au modèle de pet dans le slot.
 func apply_slot_effect(pet_node: Node3D, type_info: Dictionary):

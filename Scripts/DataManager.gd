@@ -5,6 +5,7 @@ extends Node
 # 🔹 Signaux pour communiquer les changements à l'interface.
 signal inventory_updated
 signal total_pet_count_changed(new_count)
+signal equipped_pets_changed
 
 var autosave_timer: Timer
 
@@ -36,12 +37,12 @@ var pet_types = [
 
 # 🔹 Définition de chaque pet et de ses stats de BASE.
 var pet_definitions = {
-	"Cat":    {"base_stats": {"Power": 1, "LuckBoost": 1.0, "SpeedBoost": 1.0}, "rarity": "Common",   "model": preload("res://Assets/Pets/cat/Cat.glb")},
-	"Rabbit": {"base_stats": {"Power": 2, "LuckBoost": 1.1, "SpeedBoost": 1.0}, "rarity": "Uncommon", "model": preload("res://Assets/Pets/Rabbit/Untitled.glb")},
-	"Bee":    {"base_stats": {"Power": 5, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Rare",     "model": preload("res://Assets/Pets/bee/Bee.glb")},
-	"Test1":  {"base_stats": {"Power": 3, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Epic",     "model": preload("res://Assets/Egg.glb")},
-	"Test2":  {"base_stats": {"Power": 10,"LuckBoost": 1.5, "SpeedBoost": 1.2}, "rarity": "Legendary","model": preload("res://Assets/Egg.glb")},
-	"Test3":  {"base_stats": {"Power": 25,"LuckBoost": 2.0, "SpeedBoost": 1.5}, "rarity": "Mythic",   "model": preload("res://Assets/Egg.glb")}
+	"Cat":    {"base_stats": {"CoinBoost": 1, "LuckBoost": 1.0, "SpeedBoost": 1.0}, "rarity": "Common",   "model": preload("res://Assets/Pets/cat/Cat.glb")},
+	"Rabbit": {"base_stats": {"CoinBoost": 2, "LuckBoost": 1.1, "SpeedBoost": 1.0}, "rarity": "Uncommon", "model": preload("res://Assets/Pets/Rabbit/Untitled.glb")},
+	"Bee":    {"base_stats": {"CoinBoost": 5, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Rare",     "model": preload("res://Assets/Pets/bee/Bee.glb")},
+	"Test1":  {"base_stats": {"CoinBoost": 3, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Epic",     "model": preload("res://Assets/Egg.glb")},
+	"Test2":  {"base_stats": {"CoinBoost": 10,"LuckBoost": 1.5, "SpeedBoost": 1.2}, "rarity": "Legendary","model": preload("res://Assets/Egg.glb")},
+	"Test3":  {"base_stats": {"CoinBoost": 25,"LuckBoost": 2.0, "SpeedBoost": 1.5}, "rarity": "Mythic",   "model": preload("res://Assets/Egg.glb")}
 }
 
 # 🔹 Définition des œufs et des pets qu'ils peuvent contenir.
@@ -77,6 +78,9 @@ var option_confirm_delete = true
 var player_inventory: Array[Dictionary] = []
 var next_pet_unique_id = 0
 
+# 🔹 Système d'Équipe
+var max_equipped_pets: int = 5
+
 # 🔹 Interrupteur pour la progression du jeu
 var progression_is_active = false
 var one_second_timer: Timer
@@ -97,6 +101,7 @@ func add_pet_to_inventory(pet_base_name: String, pet_type_info: Dictionary):
 
 # 🔹 Supprime un pet de l'inventaire en utilisant son ID unique.
 func remove_pet_by_id(pet_id: int):
+	unequip_pet(pet_id)
 	for i in range(player_inventory.size()):
 		if player_inventory[i]["unique_id"] == pet_id:
 			player_inventory.remove_at(i)
@@ -110,6 +115,18 @@ func get_pet_by_id(pet_id: int) -> Dictionary:
 		if pet["unique_id"] == pet_id:
 			return pet
 	return {}
+
+# 🔹 Ajoute un pet à l'équipe.
+func equip_pet(pet_id: int):
+	if equipped_pets.size() < max_equipped_pets and not pet_id in equipped_pets:
+		equipped_pets.append(pet_id)
+		equipped_pets_changed.emit()
+
+# 🔹 Retire un pet de l'équipe.
+func unequip_pet(pet_id: int):
+	if pet_id in equipped_pets:
+		equipped_pets.erase(pet_id)
+		equipped_pets_changed.emit()
 
 # 🔹 Calcule les stats finales d'un pet en appliquant le multiplicateur de son type.
 func calculate_final_stats(pet_base_name: String, pet_type_info: Dictionary) -> Dictionary:
@@ -141,19 +158,33 @@ func on_one_second_tick():
 	coins += coins_this_tick
 	total_coins_earned += coins_this_tick
 
-# --- Fonctions "Get" pour que l'UI puisse lire les données ---
+# 🔹 Calcule le multiplicateur de Luck total basé sur l'équipe.
 func get_total_luck_boost() -> float:
-	# TODO: Calculer en fonction des pets équipés
-	return 1.0
+	var total_multiplier = 1.0
+	for pet_id in equipped_pets:
+		var pet_instance = get_pet_by_id(pet_id)
+		if not pet_instance.is_empty():
+			total_multiplier *= pet_instance["stats"]["LuckBoost"]
+	return total_multiplier
 
+# 🔹 Calcule le multiplicateur de Vitesse total basé sur l'équipe.
 func get_total_speed_boost() -> float:
-	# TODO: Calculer en fonction des pets équipés
-	return 1.0
+	var total_multiplier = 1.0
+	for pet_id in equipped_pets:
+		var pet_instance = get_pet_by_id(pet_id)
+		if not pet_instance.is_empty():
+			total_multiplier *= pet_instance["stats"]["SpeedBoost"]
+	return total_multiplier
 
+# 🔹 Calcule le gain de Coins par seconde basé sur l'équipe.
 func get_coins_per_second() -> float:
 	var base_rate = 1.0
-	# TODO: Multiplier par le bonus des pets équipés
-	return base_rate
+	var total_multiplier = 1.0
+	for pet_id in equipped_pets:
+		var pet_instance = get_pet_by_id(pet_id)
+		if not pet_instance.is_empty():
+			total_multiplier *= pet_instance["stats"]["CoinBoost"]
+	return base_rate * total_multiplier
 
 func get_gems_per_second_chance() -> float:
 	# TODO: Calculer en fonction des pets équipés

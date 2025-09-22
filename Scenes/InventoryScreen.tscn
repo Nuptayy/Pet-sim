@@ -102,7 +102,7 @@ size_flags_vertical = 1
 [node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
 layout_mode = 2
 
-[node name="PowerLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+[node name="CoinBoostLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -125,6 +125,7 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="EquipButton" type="Button" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Equip"
 
