@@ -215,3 +215,4 @@ func increment_eggs_hatched(amount: int):
 func discover_pet(pet_name: String):
 	if not discovered_pets.has(pet_name):
 		discovered_pets[pet_name] = true
+		print("Nouveau pet découvert pour l'Index : ", pet_name)

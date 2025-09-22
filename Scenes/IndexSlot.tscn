@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3 uid="uid://bs7grhr8kxpng"]
+
+[ext_resource type="PackedScene" uid="uid://brgd3psoj3h4a" path="res://Scenes/PetPreview3D.tscn" id="1_5mq7n"]
+[ext_resource type="Script" uid="uid://c83hg8lafbwf3" path="res://Scripts/IndexSlot.gd" id="2_rjkju"]
+
+[node name="IndexSlot" type="PanelContainer"]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("2_rjkju")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="PetPreview" type="SubViewportContainer" parent="VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+
+[node name="SubViewport" type="SubViewport" parent="VBoxContainer/PetPreview"]
+own_world_3d = true
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(96, 96)
+render_target_update_mode = 4
+
+[node name="PetPreview3D" parent="VBoxContainer/PetPreview/SubViewport" instance=ExtResource("1_5mq7n")]
+
+[node name="PetNameLabel" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4

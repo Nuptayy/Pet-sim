@@ -1,7 +1,6 @@
 # OptionsMenu.gd
 extends PanelContainer
 
-# 🔹 Signal pour informer le parent (le PauseMenu) de se fermer.
 signal back_pressed
 signal graphic_settings_changed(quality_index)
 
@@ -22,14 +21,19 @@ const RESOLUTIONS = {
 	"3840x2160": Vector2i(3840, 2160)
 }
 
+# 🔹 Un "verrou" pour empêcher les signaux de se déclencher pendant le chargement initial.
+var _is_loading_settings = false
+
 # 🔹 Initialisation du menu.
 func _ready():
 	populate_resolution_button()
 	populate_quality_button()
 	populate_fps_limit_button()
 
-	load_settings()
+	# Au lieu d'appeler load_settings() directement, on se connecte à la visibilité.
+	visibility_changed.connect(on_visibility_changed)
 
+	# Connecte les signaux pour que les changements soient appliqués.
 	resolution_button.item_selected.connect(on_resolution_changed)
 	fullscreen_checkbox.toggled.connect(on_fullscreen_toggled)
 	quality_button.item_selected.connect(on_quality_changed)
@@ -38,6 +42,11 @@ func _ready():
 	confirm_delete_checkbox.toggled.connect(on_confirm_delete_toggled)
 	
 	back_button.pressed.connect(func(): back_pressed.emit())
+
+# 🔹 Appelé quand le menu devient visible, pour charger les paramètres.
+func on_visibility_changed():
+	if visible:
+		load_and_display_settings()
 
 # --- Fonctions de Remplissage des Menus ---
 
@@ -59,9 +68,11 @@ func populate_fps_limit_button():
 
 # --- Fonctions de Chargement et d'Application des Paramètres ---
 
-# 🔹 Charge les paramètres actuels du jeu et met à jour l'UI.
-func load_settings():
-	await get_tree().process_frame
+# 🔹 Lit les valeurs depuis le SaveManager et met à jour l'interface.
+func load_and_display_settings():
+	# On active le verrou.
+	_is_loading_settings = true
+	
 	var settings = SaveManager.current_settings
 	
 	# Résolution
@@ -90,10 +101,17 @@ func load_settings():
 	
 	# Confirmation de suppression
 	confirm_delete_checkbox.button_pressed = settings["confirm_delete"]
+	
+	# On attend la fin de la frame avant de retirer le verrou.
+	await get_tree().process_frame
+	
+	# On retire le verrou.
+	_is_loading_settings = false
 
 # --- Fonctions appelées par les signaux ---
 
 func on_resolution_changed(index: int):
+	if _is_loading_settings: return
 	var selected_text = resolution_button.get_item_text(index)
 	var new_resolution = RESOLUTIONS[selected_text]
 	get_window().size = new_resolution
@@ -101,33 +119,38 @@ func on_resolution_changed(index: int):
 	SaveManager.save_options()
 
 func on_fullscreen_toggled(is_on: bool):
+	if _is_loading_settings: return
 	var new_mode = Window.MODE_FULLSCREEN if is_on else Window.MODE_WINDOWED
 	get_window().mode = new_mode
 	SaveManager.current_settings["fullscreen_mode"] = new_mode
 	SaveManager.save_options()
 
 func on_quality_changed(index: int):
+	if _is_loading_settings: return
 	SaveManager.current_settings["quality_index"] = index
 	SaveManager.save_options()
 	graphic_settings_changed.emit(index)
 	print("Qualité changée à l'index (depuis OptionsMenu): ", index)
 
 func on_vsync_toggled(is_on: bool):
-	if is_on:
-		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
-	else:
-		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	if _is_loading_settings: return
+	var new_mode = DisplayServer.VSYNC_ENABLED if is_on else DisplayServer.VSYNC_DISABLED
+	DisplayServer.window_set_vsync_mode(new_mode)
+	SaveManager.current_settings["vsync_mode"] = new_mode
 	SaveManager.save_options()
 
 func on_fps_limit_changed(index: int):
+	if _is_loading_settings: return
 	var selected_text = fps_limit_button.get_item_text(index)
-	if selected_text == "Illimité":
-		Engine.max_fps = 0
-	else:
-		Engine.max_fps = selected_text.to_int()
+	var new_limit = 0
+	if selected_text != "Illimité":
+		new_limit = selected_text.to_int()
+	Engine.max_fps = new_limit
+	SaveManager.current_settings["fps_limit"] = new_limit
 	SaveManager.save_options()
 
 func on_confirm_delete_toggled(is_on: bool):
+	if _is_loading_settings: return
 	SaveManager.current_settings["confirm_delete"] = is_on
 	SaveManager.save_options()
 
@@ -139,7 +162,7 @@ func apply_quality_setting(index: int):
 	if not world_3d:
 		printerr("Impossible de trouver le World3D pour appliquer les paramètres de qualité.")
 		return
-		
+ 
 	var env: Environment = world_3d.environment
 	if not env:
 		printerr("Aucun environnement n'est défini dans le World3D. Impossible d'appliquer les paramètres de qualité.")

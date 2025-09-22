@@ -7,6 +7,7 @@ extends Node
 @onready var inventory_screen = %InventoryScreen
 @onready var hatching_logic = %HatchingLogic
 @onready var hatching_animation_scene: Node3D = %HatchingAnimation
+@onready var index_screen = %IndexScreen
 
 # 🔹 Initialisation du jeu.
 func _ready():
@@ -28,6 +29,9 @@ func _ready():
 	hatching_logic.camera = hatching_animation_scene.get_node("Camera3D")
 	hatching_logic.egg_grid_container = hatching_animation_scene.get_node("EggGridContainer")
 	hatching_logic.viewport_container = get_viewport()
+	
+	hatching_screen.get_node("%IndexButton").pressed.connect(func(): index_screen.show())
+	index_screen.close_requested.connect(func(): index_screen.hide())
 	
 	apply_quality_setting(SaveManager.current_settings["quality_index"])
 	
