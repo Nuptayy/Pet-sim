@@ -3,14 +3,13 @@ extends PanelContainer
 
 signal hatch_requested(egg_name, count)
 signal select_requested(egg_name)
+signal auto_delete_requested(egg_name)
 
 var egg_name: String
 @onready var preview_viewport_container: SubViewportContainer = %EggPreview
 
 # 🔹 La fonction _ready est appelée une fois que tous les enfants sont prêts.
 func _ready():
-	# On se connecte au signal "ready" de la scène de preview instanciée.
-	# C'est une manière non-bloquante d'attendre que tout soit chargé.
 	if preview_viewport_container.get_child(0).get_child_count() > 0:
 		var preview_scene = preview_viewport_container.get_child(0).get_child(0)
 		# On attend que la scène de preview soit complètement prête avant de charger le modèle.
@@ -20,7 +19,6 @@ func _ready():
 
 # 🔹 Cette fonction est appelée une fois que la scène de preview est prête.
 func _on_preview_ready():
-	# Maintenant on peut charger le modèle 3D en toute sécurité.
 	load_preview_model()
 	
 # 🔹 Configure les informations textuelles et les connexions des boutons.
@@ -35,6 +33,7 @@ func setup(egg_definition: Dictionary, number_of_egg_max: int):
 	%Hatch1Button.pressed.connect(func(): hatch_requested.emit(egg_name, 1))
 	%HatchMaxButton.pressed.connect(func(): hatch_requested.emit(egg_name, number_of_egg_max))
 	%AutoHatchButton.pressed.connect(func(): hatch_requested.emit(egg_name, -1))
+	%AutoDeleteButton.pressed.connect(func(): auto_delete_requested.emit(egg_name))
 	%SelectButton.pressed.connect(func(): select_requested.emit(egg_name))
 	
 	# Important: on doit stocker les données de l'œuf pour les utiliser plus tard.

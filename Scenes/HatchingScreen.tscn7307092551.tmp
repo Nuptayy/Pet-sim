@@ -1,0 +1,61 @@
+[gd_scene load_steps=5 format=3 uid="uid://bkoqp428qpx3f"]
+
+[ext_resource type="Script" uid="uid://da75wf6l4na7i" path="res://Scripts/HatchingScreen.gd" id="1_q8fgx"]
+[ext_resource type="PackedScene" uid="uid://v7suj6cuyf2s" path="res://Scenes/AutoDeleteMenu.tscn" id="2_r5ssx"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dg7qe"]
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q8fgx"]
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="HatchingScreen" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dg7qe")
+script = ExtResource("1_q8fgx")
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 2
+
+[node name="ContentPanel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_q8fgx")
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/ContentPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/ContentPanel/MarginContainer"]
+custom_minimum_size = Vector2(0, 400)
+layout_mode = 2
+
+[node name="EggList" type="VBoxContainer" parent="CenterContainer/ContentPanel/MarginContainer/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="AutoDeleteMenu" parent="CenterContainer" instance=ExtResource("2_r5ssx")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="IndexButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 8
+text = "Index"

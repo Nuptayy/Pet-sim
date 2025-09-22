@@ -73,6 +73,7 @@ func save_game_data():
 	config.set_value("PlayerData", "eggs_hatched", DataManager.eggs_hatched)
 	config.set_value("PlayerData", "total_coins_earned", DataManager.total_coins_earned)
 	config.set_value("PlayerData", "total_gems_earned", DataManager.total_gems_earned)
+	config.set_value("AutoDelete", "filters", DataManager.auto_delete_filters)
 	
 	# 2. Sauvegarde de l'équipe.
 	config.set_value("PlayerData", "equipped_pets", DataManager.equipped_pets)
@@ -116,6 +117,7 @@ func load_game_data():
 	DataManager.eggs_hatched = config.get_value("PlayerData", "eggs_hatched", 0)
 	DataManager.total_coins_earned = config.get_value("PlayerData", "total_coins_earned", 0.0)
 	DataManager.total_gems_earned = config.get_value("PlayerData", "total_gems_earned", 0)
+	DataManager.auto_delete_filters = config.get_value("AutoDelete", "filters", {})
 	
 	# 2. Chargement de l'équipe.
 	DataManager.equipped_pets = config.get_value("PlayerData", "equipped_pets", [])

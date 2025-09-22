@@ -81,6 +81,9 @@ var next_pet_unique_id = 0
 # 🔹 Système d'Équipe
 var max_equipped_pets: int = 5
 
+# 🔹 Stocke les filtres d'auto-delete.
+var auto_delete_filters: Dictionary = {}
+
 # 🔹 Interrupteur pour la progression du jeu
 var progression_is_active = false
 var one_second_timer: Timer
@@ -137,12 +140,15 @@ func calculate_final_stats(pet_base_name: String, pet_type_info: Dictionary) -> 
 	return base_stats
 
 func _ready():
+	for egg_def in egg_definitions:
+		if not auto_delete_filters.has(egg_def["name"]):
+			auto_delete_filters[egg_def["name"]] = {}
+	
 	one_second_timer = Timer.new()
 	one_second_timer.wait_time = 1.0
 	one_second_timer.autostart = true
 	one_second_timer.timeout.connect(on_one_second_tick)
 	add_child(one_second_timer)
-	
 	autosave_timer = Timer.new()
 	autosave_timer.wait_time = 60.0
 	autosave_timer.autostart = true

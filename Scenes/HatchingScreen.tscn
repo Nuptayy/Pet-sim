@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://bkoqp428qpx3f"]
+[gd_scene load_steps=5 format=3 uid="uid://bkoqp428qpx3f"]
 
 [ext_resource type="Script" uid="uid://da75wf6l4na7i" path="res://Scripts/HatchingScreen.gd" id="1_q8fgx"]
+[ext_resource type="PackedScene" uid="uid://v7suj6cuyf2s" path="res://Scenes/AutoDeleteMenu.tscn" id="2_r5ssx"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dg7qe"]
 corner_radius_top_left = 12
@@ -47,6 +48,11 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+
+[node name="AutoDeleteMenu" parent="CenterContainer" instance=ExtResource("2_r5ssx")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
 
 [node name="IndexButton" type="Button" parent="."]
 unique_name_in_owner = true

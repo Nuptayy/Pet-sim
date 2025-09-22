@@ -68,7 +68,26 @@ func hatch_eggs(egg_name: String, count: int):
 	place_eggs_on_grid(pets_to_hatch, egg_name)
 	await play_simultaneous_hatch_animation()
 	
+	var filters = DataManager.auto_delete_filters.get(egg_name, {})
+	var pets_to_keep = []
+	
 	for pet_data in pets_to_hatch:
+		var pet_def = DataManager.pet_definitions[pet_data["base_name"]]
+		var rarity = pet_def["rarity"]
+		var type = pet_data["type"]["name"]
+		var should_be_deleted = false
+		
+		if filters.has(rarity):
+			if type in filters[rarity]:
+				should_be_deleted = true
+		
+		if should_be_deleted:
+			print("Pet auto-supprimé : %s (%s)" % [pet_data["base_name"], type])
+			# TODO: La logique pour afficher la croix rouge ira ici.
+		else:
+			pets_to_keep.append(pet_data)
+	
+	for pet_data in pets_to_keep:
 		DataManager.add_pet_to_inventory(pet_data["base_name"], pet_data["type"])
 	
 	var safe_speed = max(DataManager.get_total_speed_boost(), 1.0)
@@ -80,7 +99,7 @@ func hatch_eggs(egg_name: String, count: int):
 	
 	IsHatching = false
 	if not AutoHatch:
-		animation_finished.emit() # Informe le Main.gd de revenir à l'écran de sélection
+		animation_finished.emit()
 
 # --- Fonctions de Tirage ---
 
