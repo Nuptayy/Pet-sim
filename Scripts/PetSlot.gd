@@ -1,6 +1,8 @@
 # PetSlot.gd
 extends Button
 
+const EQUIPPED_STYLE = preload("res://style/equipped_style.tres")
+
 # 🔹 Configure ce slot avec les données d'un pet.
 func setup(pet_instance: Dictionary):
 	if not has_node("SubViewportContainer"):
@@ -39,15 +41,7 @@ func setup(pet_instance: Dictionary):
 	
 	var is_equipped = pet_instance["unique_id"] in DataManager.equipped_pets
 	if is_equipped:
-		var equipped_style = StyleBoxFlat.new()
-		equipped_style.bg_color = Color(0.2, 0.2, 0.2)
-		equipped_style.border_width_top = 4
-		equipped_style.border_width_bottom = 4
-		equipped_style.border_width_left = 4
-		equipped_style.border_width_right = 4
-		equipped_style.border_color = Color.GREEN
-		
-		add_theme_stylebox_override("normal", equipped_style)
+		add_theme_stylebox_override("normal", EQUIPPED_STYLE)
 	else:
 		remove_theme_stylebox_override("normal")
 

@@ -1,10 +1,12 @@
 # HatchingLogic.gd
 extends Node
 
+const RED_CROSS_TEXTURE = preload("res://Assets/UI/red_cross.png")
+
 # 🔹 Paramètres de jeu, configurables depuis l'inspecteur
 @export var NumberOfEggMax = 12
 @export var Luck = 1.0
-@export var global_egg_scale_multiplier = 0.65
+@export var global_egg_scale_multiplier = 0.5
 @export var low_tier_rarities: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 
 # 🔹 Variables internes
@@ -44,13 +46,35 @@ func auto_hatch_loop(egg_name: String):
 	print("🚀 Auto-Hatch activé pour %s" % egg_name)
 	while AutoHatch:
 		if not IsHatching:
-			await hatch_eggs(egg_name, NumberOfEggMax)
+			var success = await hatch_eggs(egg_name, NumberOfEggMax)
+			if not success:
+				AutoHatch = false
+				print("🛑 Auto-Hatch désactivé automatiquement (fonds insuffisants).")
+				animation_finished.emit()
+				break
 		else:
 			await get_tree().process_frame
 
 # 🔹 Fonction principale qui orchestre une seule séquence d'éclosion
 func hatch_eggs(egg_name: String, count: int):
 	if IsHatching: return
+	var egg_cost = 0
+	for egg_def in DataManager.egg_definitions:
+		if egg_def["name"] == egg_name:
+			egg_cost = egg_def["cost"]
+			break
+	
+	if egg_cost == 0:
+		printerr("Coût non trouvé pour l'œuf: ", egg_name)
+		return false
+	
+	var total_cost = egg_cost * count
+	if DataManager.coins < total_cost:
+		print("Pas assez de Coins ! Requis: %d, Possédés: %d" % [total_cost, int(DataManager.coins)])
+		# TODO: Ajouter un feedback visuel ici (ex: faire trembler le bouton en rouge).
+		return false
+	DataManager.coins -= total_cost
+	
 	IsHatching = true
 	DataManager.increment_eggs_hatched(count)
 	animation_started.emit()
@@ -64,29 +88,20 @@ func hatch_eggs(egg_name: String, count: int):
 	var pets_to_hatch = []
 	for i in range(count):
 		pets_to_hatch.append(hatch_pet(lucky_pets_table))
- 
-	place_eggs_on_grid(pets_to_hatch, egg_name)
-	await play_simultaneous_hatch_animation()
 	
 	var filters = DataManager.auto_delete_filters.get(egg_name, {})
-	var pets_to_keep = []
-	
 	for pet_data in pets_to_hatch:
 		var pet_def = DataManager.pet_definitions[pet_data["base_name"]]
 		var rarity = pet_def["rarity"]
 		var type = pet_data["type"]["name"]
-		var should_be_deleted = false
-		
-		if filters.has(rarity):
-			if type in filters[rarity]:
-				should_be_deleted = true
-		
-		if should_be_deleted:
-			print("Pet auto-supprimé : %s (%s)" % [pet_data["base_name"], type])
-			# TODO: La logique pour afficher la croix rouge ira ici.
-		else:
-			pets_to_keep.append(pet_data)
+		pet_data["to_be_deleted"] = false
+		if filters.has(rarity) and type in filters[rarity]:
+			pet_data["to_be_deleted"] = true
 	
+	place_eggs_on_grid(pets_to_hatch, egg_name)
+	await play_simultaneous_hatch_animation()
+	
+	var pets_to_keep = pets_to_hatch.filter(func(p): return not p["to_be_deleted"])
 	for pet_data in pets_to_keep:
 		DataManager.add_pet_to_inventory(pet_data["base_name"], pet_data["type"])
 	
@@ -100,6 +115,7 @@ func hatch_eggs(egg_name: String, count: int):
 	IsHatching = false
 	if not AutoHatch:
 		animation_finished.emit()
+	return true
 
 # --- Fonctions de Tirage ---
 
@@ -278,6 +294,14 @@ func play_simultaneous_hatch_animation():
 				visual_node.layers = 1
 			
 			apply_visual_effect(pet_instance, pet_data["type"])
+			
+			if pet_data["to_be_deleted"]:
+				var cross_sprite = Sprite3D.new()
+				cross_sprite.texture = RED_CROSS_TEXTURE
+				cross_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+				cross_sprite.no_depth_test = true
+				cross_sprite.pixel_size = 0.01
+				pet_holder_node.add_child(cross_sprite)
 			
 	await get_tree().create_timer(0.25 / safe_speed).timeout
 

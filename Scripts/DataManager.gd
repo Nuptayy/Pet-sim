@@ -49,6 +49,7 @@ var pet_definitions = {
 var egg_definitions = [
 	{
 		"name": "Basic Egg",
+		"cost": 100,
 		"model": preload("res://Scenes/Egg.tscn"),
 		"pets": [
 			{"name": "Cat",    "chance": 50.0},

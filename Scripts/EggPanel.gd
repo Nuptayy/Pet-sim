@@ -25,7 +25,7 @@ func _on_preview_ready():
 func setup(egg_definition: Dictionary, number_of_egg_max: int):
 	self.egg_name = egg_definition["name"]
 	
-	%Hatch1Button.text = "Hatch 1"
+	%Hatch1Button.text = "Hatch 1 (%d Coins)" % egg_definition["cost"]
 	%HatchMaxButton.text = "Hatch %d" % number_of_egg_max
 	%AutoHatchButton.text = "Auto Hatch"
 	%SelectButton.text = "Select"

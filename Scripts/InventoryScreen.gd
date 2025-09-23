@@ -34,13 +34,25 @@ func _ready():
 	_update_total_count(DataManager.player_inventory.size())
 
 func redraw_inventory():
+	var previously_selected_id = current_selected_pet_id
 	for child in %PetGrid.get_children():
 		child.queue_free()
+	
+	var selected_pet_still_exists = false
 	for pet_instance in DataManager.player_inventory:
+		if pet_instance["unique_id"] == previously_selected_id:
+			selected_pet_still_exists = true
+		
 		var slot = PET_SLOT_SCENE.instantiate()
 		%PetGrid.add_child(slot)
 		slot.setup(pet_instance)
 		slot.pressed.connect(display_pet_details.bind(pet_instance["unique_id"]))
+	
+	if selected_pet_still_exists:
+		display_pet_details(previously_selected_id)
+	else:
+		%DetailsPanel.visible = false
+		current_selected_pet_id = -1
 
 func display_pet_details(pet_id: int):
 	current_selected_pet_id = pet_id
@@ -49,38 +61,30 @@ func display_pet_details(pet_id: int):
 	if pet_data.is_empty(): 
 		%DetailsPanel.visible = false
 		return
-
+	
 	var pet_base_name = pet_data["base_name"]
 	var base_pet_def = DataManager.pet_definitions[pet_base_name]
 	var rarity_def = DataManager.rarities[base_pet_def["rarity"]]
-	
 	%PetNameLabel.text = "%s (%s)" % [pet_data["base_name"], pet_data["type"]["name"]]
 	%RarityLabel.text = base_pet_def["rarity"]
 	%RarityLabel.add_theme_color_override("font_color", rarity_def["color"])
-	
 	var combined_chance = DataManager.get_combined_chance(pet_data)
 	%ChanceLabel.text = "(%s)" % format_chance(combined_chance)
-	
 	%CoinBoostLabel.text = "Coin Boost: x%s" % pet_data["stats"]["CoinBoost"]
 	%LuckBoostLabel.text = "Luck Boost: x%s" % pet_data["stats"]["LuckBoost"]
 	%SpeedBoostLabel.text = "Speed Boost: x%s" % pet_data["stats"]["SpeedBoost"]
-	
 	var equip_button = %EquipButton
 	if pet_id in DataManager.equipped_pets:
 		equip_button.text = "Unequip"
 		equip_button.disabled = false
 	else:
 		equip_button.text = "Equip"
-		if DataManager.equipped_pets.size() >= DataManager.max_equipped_pets:
-			equip_button.disabled = true
-		else:
-			equip_button.disabled = false
+		equip_button.disabled = DataManager.equipped_pets.size() >= DataManager.max_equipped_pets
 	
 	for child in pet_holder.get_children():
 		child.queue_free()
 	var pet_model = base_pet_def["model"].instantiate()
 	pet_holder.add_child(pet_model)
-	
 	var visual_node = find_mesh_recursively(pet_model)
 	if visual_node:
 		visual_node.layers = 4
