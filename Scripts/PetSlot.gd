@@ -1,80 +1,86 @@
 # PetSlot.gd
 extends Button
 
+# --- Constantes ---
 const EQUIPPED_STYLE = preload("res://style/equipped_style.tres")
+const RENDER_LAYER_PREVIEW = 3 # Couche de rendu pour les previews de l'UI
 
-# 🔹 Configure ce slot avec les données d'un pet.
+# --- Références aux Nœuds ---
+# On accède directement à la scène de preview grâce à son nom unique.
+@onready var preview_scene: Node3D = %PetPreview3D
+
+
+# --- Méthodes Publiques ---
+
+# 🔹 Configure l'apparence du slot (modèle 3D, effet, bordure d'équipement) pour un pet donné.
 func setup(pet_instance: Dictionary):
-	if not has_node("SubViewportContainer"):
-		await get_tree().process_frame
-		if not has_node("SubViewportContainer"):
-			printerr("ERREUR CRITIQUE dans PetSlot: SubViewportContainer est manquant.")
-			return
+	# Pas besoin d'attendre ici, les @onready garantissent que les nœuds sont disponibles.
 	
-	var sub_viewport = get_node("SubViewportContainer").get_child(0)
-	if sub_viewport.get_child_count() == 0:
-		await get_tree().process_frame
-		if sub_viewport.get_child_count() == 0:
-			printerr("ERREUR CRITIQUE dans PetSlot: La scène de preview est manquante dans le SubViewport.")
-			return
+	# Configure l'infobulle.
+	self.tooltip_text = "%s (%s)" % [pet_instance.base_name, pet_instance.type.name]
 	
-	var preview_scene = sub_viewport.get_child(0)
-	var pet_holder: Node3D = preview_scene.get_node("ObjectHolder")
+	# Récupère le conteneur du modèle 3D à l'intérieur de la scène de preview.
+	var object_holder: Node3D = preview_scene.get_node("ObjectHolder")
 	
-	if not is_instance_valid(pet_holder):
-		printerr("ERREUR CRITIQUE dans PetSlot: ObjectHolder non trouvé.")
-		return
-	
-	for child in pet_holder.get_children():
+	# Nettoie l'ancien modèle.
+	for child in object_holder.get_children():
 		child.queue_free()
 	
-	var pet_base_name = pet_instance["base_name"]
-	if DataManager.pet_definitions.has(pet_base_name):
-		var pet_def = DataManager.pet_definitions[pet_base_name]
-		var model = pet_def["model"].instantiate()
-		pet_holder.add_child(model)
-		var visual_node = find_mesh_recursively(model)
-		if visual_node:
-			visual_node.layers = 4
-		apply_slot_effect(model, pet_instance["type"])
-	self.tooltip_text = pet_instance["base_name"] + " (" + pet_instance["type"]["name"] + ")"
+	# Instancie et configure le nouveau modèle.
+	var pet_base_name = pet_instance.base_name
+	if DataManager.PET_DEFINITIONS.has(pet_base_name):
+		var pet_def = DataManager.PET_DEFINITIONS[pet_base_name]
+		var model = pet_def.model.instantiate()
+		object_holder.add_child(model)
+		
+		_apply_slot_effect(model, pet_instance.type)
+		_set_model_render_layer(model, RENDER_LAYER_PREVIEW)
 	
-	var is_equipped = pet_instance["unique_id"] in DataManager.equipped_pets
+	# Met à jour la bordure visuelle si le pet est équipé.
+	_update_equipped_style(pet_instance.unique_id)
+
+
+# --- Méthodes Internes ---
+
+# 🔹 Applique une bordure visuelle au slot si le pet est dans l'équipe.
+func _update_equipped_style(pet_id: int):
+	var is_equipped = pet_id in DataManager.equipped_pets
 	if is_equipped:
 		add_theme_stylebox_override("normal", EQUIPPED_STYLE)
 	else:
-		remove_theme_stylebox_override("normal")
+		# Assure-toi que le style est bien retiré s'il n'est pas équipé.
+		if get_theme_stylebox("normal") == EQUIPPED_STYLE:
+			remove_theme_stylebox_override("normal")
 
-# 🔹 Applique l'effet visuel au modèle de pet dans le slot.
-func apply_slot_effect(pet_node: Node3D, type_info: Dictionary):
-	var mesh_instance = find_mesh_recursively(pet_node)
+# 🔹 Applique un effet visuel (shader) au modèle du pet.
+func _apply_slot_effect(pet_node: Node3D, type_info: Dictionary):
+	var mesh_instance = _find_mesh_recursively(pet_node)
 	if not mesh_instance: return
-	mesh_instance.material_override = null
-	mesh_instance.material_overlay = null
-	var effect_type = type_info["effect_type"]
-	var effect_value = type_info["value"]
 	
-	match effect_type:
-		"none": pass
-#		"color":
-#			for i in range(mesh_instance.get_surface_override_material_count()):
-#				var original_material = mesh_instance.get_active_material(i)
-#				var new_material = original_material.duplicate(true) if original_material else StandardMaterial3D.new()
-#				if new_material is StandardMaterial3D:
-#					new_material.albedo_color = effect_value
-#					mesh_instance.set_surface_override_material(i, new_material)
-		"shader":
-			if not "res://" in effect_value: return
-			var shader = load(effect_value) as Shader
-			if shader:
-				var shader_material = ShaderMaterial.new()
-				shader_material.shader = shader
-				mesh_instance.material_overlay = shader_material
+	mesh_instance.material_overlay = null # Réinitialise
+	
+	if type_info.effect_type == "shader" and type_info.value is String and type_info.value.begins_with("res://"):
+		var shader = load(type_info.value) as Shader
+		if shader:
+			var shader_material = ShaderMaterial.new()
+			shader_material.shader = shader
+			mesh_instance.material_overlay = shader_material
 
-# 🔹 Trouve la première instance de MeshInstance3D dans un nœud et ses enfants.
-func find_mesh_recursively(node: Node) -> MeshInstance3D:
-	if node is MeshInstance3D: return node
+# 🔹 Applique une couche de rendu à tous les meshes d'un nœud et de ses enfants.
+func _set_model_render_layer(node: Node, layer_number: int):
+	var layer_mask = 1 << (layer_number - 1)
+	
+	if node is MeshInstance3D:
+		node.layers = layer_mask
 	for child in node.get_children():
-		var mesh = find_mesh_recursively(child)
-		if mesh: return mesh
+		_set_model_render_layer(child, layer_number)
+
+# 🔹 Trouve récursivement le premier nœud MeshInstance3D dans une hiérarchie.
+func _find_mesh_recursively(node: Node) -> MeshInstance3D:
+	if node is MeshInstance3D:
+		return node
+	for child in node.get_children():
+		var mesh = _find_mesh_recursively(child)
+		if mesh:
+			return mesh
 	return null

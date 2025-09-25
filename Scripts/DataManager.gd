@@ -1,52 +1,56 @@
 # DataManager.gd
-# 🔹 Ce script est un Autoload. Il conserve toutes les données importantes du jeu.
 extends Node
 
-# 🔹 Signaux pour communiquer les changements à l'interface.
+# --- Signaux ---
+# Communiquent les changements de données au reste de l'application.
 signal inventory_updated
 signal total_pet_count_changed(new_count)
 signal equipped_pets_changed
+signal gems_updated(new_gem_count)
 
-var autosave_timer: Timer
+# ==============================================================================
+# 1. DÉFINITIONS STATIQUES DU JEU
+# Ces données ne changent pas pendant le jeu.
+# ==============================================================================
 
-# 🔹 Définition des raretés du jeu.
-var rarities = {
-	"Common":    {"color": Color.WHITE, "order": 0},
-	"Uncommon":  {"color": Color.GREEN, "order": 1},
-	"Rare":      {"color": Color.BLUE, "order": 2},
-	"Epic":      {"color": Color.PURPLE, "order": 3},
-	"Legendary": {"color": Color.ORANGE, "order": 4},
-	"Mythic":    {"color": Color.YELLOW, "order": 5},
-	"Divine":    {"color": Color.SKY_BLUE, "order": 6},
-	"Godly":     {"color": Color.REBECCA_PURPLE, "order": 7},
-	"Secret":    {"color": Color.MEDIUM_PURPLE, "order": 8},
-	"Insane":    {"color": Color.DARK_RED, "order": 9},
-	"WTF":       {"color": Color.GOLD, "order": 10},
-	"Impossible":{"color": Color.BLACK, "order": 11},
-	"???":       {"color": Color.WHITE, "order": 12}
+# --- Définitions des Raretés ---
+const RARITIES = {
+	"Common":     {"color": Color.WHITE, "order": 0},
+	"Uncommon":   {"color": Color.GREEN, "order": 1},
+	"Rare":       {"color": Color.BLUE, "order": 2},
+	"Epic":       {"color": Color.PURPLE, "order": 3},
+	"Legendary":  {"color": Color.ORANGE, "order": 4},
+	"Mythic":     {"color": Color.YELLOW, "order": 5},
+	"Divine":     {"color": Color.SKY_BLUE, "order": 6},
+	"Godly":      {"color": Color.REBECCA_PURPLE, "order": 7},
+	"Secret":     {"color": Color.MEDIUM_PURPLE, "order": 8},
+	"Insane":     {"color": Color.DARK_RED, "order": 9},
+	"WTF":        {"color": Color.GOLD, "order": 10},
+	"Impossible": {"color": Color.BLACK, "order": 11},
+	"???":        {"color": Color.WHITE, "order": 12}
 }
 
-# 🔹 Définition des types de pet (Classic, Golden, etc.).
-var pet_types = [
-	{"name": "Classic", "chance": 88.89, "effect_type": "none",   "value": null,                                    "order": 0, "stat_multiplier": 1.0},
-	{"name": "Golden",  "chance": 10.0,  "effect_type": "shader", "value": "res://Shaders/golden_effect.gdshader",  "order": 1, "stat_multiplier": 1.5},
+# --- Définitions des Types de Pet ---
+const PET_TYPES = [
+	{"name": "Classic", "chance": 88.89, "effect_type": "none",   "value": null, "order": 0, "stat_multiplier": 1.0},
+	{"name": "Golden",  "chance": 10.0,  "effect_type": "shader", "value": "res://Shaders/golden_effect.gdshader", "order": 1, "stat_multiplier": 1.5},
 	{"name": "Rainbow", "chance": 1.0,   "effect_type": "shader", "value": "res://Shaders/rainbow_effect.gdshader", "order": 2, "stat_multiplier": 2.0},
-	{"name": "Glitch",  "chance": 0.1,   "effect_type": "shader", "value": "res://Shaders/glitch_effect.gdshader",  "order": 3, "stat_multiplier": 5.0},
-	{"name": "Virus",   "chance": 0.01,  "effect_type": "shader", "value": "res://Shaders/virus_effect.gdshader",   "order": 4, "stat_multiplier": 10.0}
+	{"name": "Glitch",  "chance": 0.1,   "effect_type": "shader", "value": "res://Shaders/glitch_effect.gdshader", "order": 3, "stat_multiplier": 5.0},
+	{"name": "Virus",   "chance": 0.01,  "effect_type": "shader", "value": "res://Shaders/virus_effect.gdshader", "order": 4, "stat_multiplier": 10.0}
 ]
 
-# 🔹 Définition de chaque pet et de ses stats de BASE.
-var pet_definitions = {
-	"Cat":    {"base_stats": {"CoinBoost": 1, "LuckBoost": 1.0, "SpeedBoost": 1.0}, "rarity": "Common",   "model": preload("res://Assets/Pets/cat/Cat.glb")},
-	"Rabbit": {"base_stats": {"CoinBoost": 2, "LuckBoost": 1.1, "SpeedBoost": 1.0}, "rarity": "Uncommon", "model": preload("res://Assets/Pets/Rabbit/Untitled.glb")},
-	"Bee":    {"base_stats": {"CoinBoost": 5, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Rare",     "model": preload("res://Assets/Pets/bee/Bee.glb")},
-	"Test1":  {"base_stats": {"CoinBoost": 3, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Epic",     "model": preload("res://Assets/Egg.glb")},
-	"Test2":  {"base_stats": {"CoinBoost": 10,"LuckBoost": 1.5, "SpeedBoost": 1.2}, "rarity": "Legendary","model": preload("res://Assets/Egg.glb")},
-	"Test3":  {"base_stats": {"CoinBoost": 25,"LuckBoost": 2.0, "SpeedBoost": 1.5}, "rarity": "Mythic",   "model": preload("res://Assets/Egg.glb")}
+# --- Définitions des Pets ---
+const PET_DEFINITIONS = {
+	"Cat":    {"base_stats": {"CoinBoost": 1.0, "LuckBoost": 1.0, "SpeedBoost": 1.0}, "rarity": "Common",    "model": preload("res://Assets/Pets/cat/Cat.glb")},
+	"Rabbit": {"base_stats": {"CoinBoost": 2.0, "LuckBoost": 1.1, "SpeedBoost": 1.0}, "rarity": "Uncommon",  "model": preload("res://Assets/Pets/Rabbit/Untitled.glb")},
+	"Bee":    {"base_stats": {"CoinBoost": 5.0, "LuckBoost": 1.2, "SpeedBoost": 1.1}, "rarity": "Rare",      "model": preload("res://Assets/Pets/bee/Bee.glb")},
+	"Test1":  {"base_stats": {"CoinBoost": 3.0, "LuckBoost": 1.25,"SpeedBoost": 1.15},"rarity": "Epic",      "model": preload("res://Assets/Egg.glb")},
+	"Test2":  {"base_stats": {"CoinBoost": 10.0,"LuckBoost": 1.5, "SpeedBoost": 1.2}, "rarity": "Legendary", "model": preload("res://Assets/Egg.glb")},
+	"Test3":  {"base_stats": {"CoinBoost": 25.0,"LuckBoost": 2.0, "SpeedBoost": 1.5}, "rarity": "Mythic",    "model": preload("res://Assets/Egg.glb")}
 }
 
-# 🔹 Définition des œufs et des pets qu'ils peuvent contenir.
-var egg_definitions = [
+# --- Définitions des Œufs ---
+const EGG_DEFINITIONS = [
 	{
 		"name": "Basic Egg",
 		"cost": 100,
@@ -62,34 +66,140 @@ var egg_definitions = [
 	}
 ]
 
-# 🔹 NOUVELLES DONNÉES DE JOUEUR
+# --- Définitions des Améliorations (Gem Shop) ---
+const GEM_UPGRADES = {
+	"team_slots": {
+		"name": "Extra Team Slot",
+		"description": "Ajoute un slot à votre équipe de pets.",
+		"base_cost": 100,
+		"cost_increase_factor": 2.5,
+		"max_level": 10,
+		"increase_per_level": 1
+	},
+	"hatch_max": {
+		"name": "Increase Hatch Max",
+		"description": "Permet d'ouvrir un œuf de plus à la fois.",
+		"base_cost": 50,
+		"cost_increase_factor": 2.0,
+		"max_level": 20,
+		"increase_per_level": 1
+	},
+	"permanent_luck": {
+		"name": "Permanent Luck",
+		"description": "Augmente votre chance permanente de 10%.",
+		"base_cost": 250,
+		"cost_increase_factor": 1.5,
+		"max_level": -1,
+		"increase_per_level": 0.1
+	}
+}
+
+
+# ==============================================================================
+# 2. DONNÉES DE PROGRESSION DU JOUEUR
+# Ces données sont modifiées pendant le jeu et sauvegardées.
+# ==============================================================================
+
+# --- Monnaies et Statistiques Globales ---
 var coins: float = 0.0
 var gems: int = 0
 var time_played: int = 0
 var eggs_hatched: int = 0
 var total_coins_earned: float = 0.0
 var total_gems_earned: int = 0
-var equipped_pets: Array[int] = [] # Stocke les unique_id des pets équipés
-var discovered_pets: Dictionary = {} # Stocke les noms des pets découverts
 
-# --- Options du joueur (seront chargées depuis la sauvegarde) ---
-var option_confirm_delete = true
-
-# 🔹 Inventaire réel du joueur.
+# --- Inventaire et Équipe ---
 var player_inventory: Array[Dictionary] = []
-var next_pet_unique_id = 0
+var equipped_pets: Array[int] = []
+var next_pet_unique_id: int = 0
+var max_equipped_pets: int = 5 # Valeur de base, modifiée par les améliorations
 
-# 🔹 Système d'Équipe
-var max_equipped_pets: int = 5
-
-# 🔹 Stocke les filtres d'auto-delete.
+# --- Index et Filtres ---
+var discovered_pets: Dictionary = {} # Clé: nom du pet, Valeur: true
 var auto_delete_filters: Dictionary = {}
 
-# 🔹 Interrupteur pour la progression du jeu
-var progression_is_active = false
-var one_second_timer: Timer
+# --- Améliorations Permanentes ---
+var permanent_luck_boost: float = 1.0 # Valeur de base, modifiée par les améliorations
+var upgrade_levels: Dictionary = { "team_slots": 0, "hatch_max": 0, "permanent_luck": 0 }
 
-# 🔹 Ajoute un pet UNIQUE à l'inventaire du joueur.
+
+# ==============================================================================
+# 3. LOGIQUE INTERNE
+# ==============================================================================
+
+# --- Outils et Contrôles Internes ---
+var progression_is_active: bool = false
+var rng = RandomNumberGenerator.new()
+var one_second_timer: Timer
+var autosave_timer: Timer
+
+
+# --- Fonctions du Cycle de Vie Godot ---
+
+# 🔹 Initialise le DataManager, configure les timers et les données par défaut.
+func _ready():
+	rng.randomize()
+	
+	# Initialise les dictionnaires de filtres pour chaque œuf s'ils n'existent pas.
+	for egg_def in EGG_DEFINITIONS:
+		if not auto_delete_filters.has(egg_def.name):
+			auto_delete_filters[egg_def.name] = {}
+	
+	# Crée le timer pour les gains passifs (chaque seconde).
+	one_second_timer = Timer.new()
+	one_second_timer.wait_time = 1.0
+	one_second_timer.autostart = true
+	one_second_timer.timeout.connect(on_one_second_tick)
+	add_child(one_second_timer)
+	
+	# Crée le timer pour la sauvegarde automatique.
+	autosave_timer = Timer.new()
+	autosave_timer.wait_time = 60.0
+	autosave_timer.autostart = true
+	autosave_timer.timeout.connect(SaveManager.save_all)
+	add_child(autosave_timer)
+
+
+# --- Fonctions de Rappel (Signal Callbacks) ---
+
+# 🔹 Gère la progression passive du jeu chaque seconde (coins, gems, temps de jeu).
+func on_one_second_tick():
+	if not progression_is_active:
+		return
+	
+	time_played += 1
+	var coins_this_tick = get_coins_per_second()
+	coins += coins_this_tick
+	total_coins_earned += coins_this_tick
+	
+	# Logique de génération de gems.
+	var gems_this_tick = 0
+	for pet_id in equipped_pets:
+		var pet_instance = get_pet_by_id(pet_id)
+		if pet_instance.is_empty(): continue
+		
+		var combined_chance_percent = get_combined_chance(pet_instance)
+		if combined_chance_percent > 0 and combined_chance_percent <= 0.1: # Limite de 1/1000
+			var denominator = 1.0 / (combined_chance_percent / 100.0)
+			var gem_chance_roll = (denominator / 1000.0) / 1000.0
+			
+			var guaranteed_gems = floor(gem_chance_roll)
+			if guaranteed_gems > 0:
+				gems_this_tick += guaranteed_gems
+			
+			var fractional_chance = gem_chance_roll - guaranteed_gems
+			if rng.randf() < fractional_chance:
+				gems_this_tick += 1
+	
+	if gems_this_tick > 0:
+		gems += gems_this_tick
+		total_gems_earned += gems_this_tick
+		gems_updated.emit(gems)
+
+
+# --- Gestion de l'Inventaire et de l'Équipe ---
+
+# 🔹 Ajoute une nouvelle instance de pet à l'inventaire du joueur.
 func add_pet_to_inventory(pet_base_name: String, pet_type_info: Dictionary):
 	var new_pet_instance = {
 		"unique_id": next_pet_unique_id,
@@ -99,158 +209,211 @@ func add_pet_to_inventory(pet_base_name: String, pet_type_info: Dictionary):
 	}
 	player_inventory.append(new_pet_instance)
 	next_pet_unique_id += 1
+	
 	discover_pet(pet_base_name)
 	inventory_updated.emit()
 	total_pet_count_changed.emit(player_inventory.size())
 
 # 🔹 Supprime un pet de l'inventaire en utilisant son ID unique.
 func remove_pet_by_id(pet_id: int):
-	unequip_pet(pet_id)
+	unequip_pet(pet_id) # S'assure de le déséquiper d'abord.
+	
 	for i in range(player_inventory.size()):
-		if player_inventory[i]["unique_id"] == pet_id:
+		if player_inventory[i].unique_id == pet_id:
 			player_inventory.remove_at(i)
 			inventory_updated.emit()
 			total_pet_count_changed.emit(player_inventory.size())
 			return
 
-# 🔹 Récupère les données d'un pet par son ID unique.
-func get_pet_by_id(pet_id: int) -> Dictionary:
-	for pet in player_inventory:
-		if pet["unique_id"] == pet_id:
-			return pet
-	return {}
-
-# 🔹 Ajoute un pet à l'équipe.
+# 🔹 Équipe un pet, s'il y a de la place dans l'équipe.
 func equip_pet(pet_id: int):
 	if equipped_pets.size() < max_equipped_pets and not pet_id in equipped_pets:
 		equipped_pets.append(pet_id)
 		equipped_pets_changed.emit()
 
-# 🔹 Retire un pet de l'équipe.
+# 🔹 Déséquipe un pet de l'équipe.
 func unequip_pet(pet_id: int):
 	if pet_id in equipped_pets:
 		equipped_pets.erase(pet_id)
 		equipped_pets_changed.emit()
 
-# 🔹 Calcule les stats finales d'un pet en appliquant le multiplicateur de son type.
-func calculate_final_stats(pet_base_name: String, pet_type_info: Dictionary) -> Dictionary:
-	var base_stats = pet_definitions[pet_base_name]["base_stats"].duplicate()
-	var multiplier = pet_type_info["stat_multiplier"]
-	for stat_name in base_stats:
-		base_stats[stat_name] *= multiplier
-	return base_stats
+# 🔹 Récupère toutes les données d'un pet de l'inventaire via son ID unique.
+func get_pet_by_id(pet_id: int) -> Dictionary:
+	for pet in player_inventory:
+		if pet.unique_id == pet_id:
+			return pet
+	return {}
 
-func _ready():
-	for egg_def in egg_definitions:
-		if not auto_delete_filters.has(egg_def["name"]):
-			auto_delete_filters[egg_def["name"]] = {}
+
+# --- Gestion des Améliorations (Gem Shop) ---
+
+# 🔹 Gère la logique d'achat et d'application d'une amélioration.
+func purchase_upgrade(upgrade_id: String) -> bool:
+	if not GEM_UPGRADES.has(upgrade_id):
+		printerr("Tentative d'achat d'une amélioration inconnue: ", upgrade_id)
+		return false
 	
-	one_second_timer = Timer.new()
-	one_second_timer.wait_time = 1.0
-	one_second_timer.autostart = true
-	one_second_timer.timeout.connect(on_one_second_tick)
-	add_child(one_second_timer)
-	autosave_timer = Timer.new()
-	autosave_timer.wait_time = 60.0
-	autosave_timer.autostart = true
-	autosave_timer.timeout.connect(SaveManager.save_all)
-	add_child(autosave_timer)
-
-func on_one_second_tick():
-	if not progression_is_active:
-		return
+	var upgrade_def = GEM_UPGRADES[upgrade_id]
+	var current_level = upgrade_levels.get(upgrade_id, 0)
 	
-	time_played += 1
-	var coins_this_tick = get_coins_per_second()
-	coins += coins_this_tick
-	total_coins_earned += coins_this_tick
+	# Vérifie si le niveau maximum est atteint.
+	if upgrade_def.max_level != -1 and current_level >= upgrade_def.max_level:
+		print("Niveau max atteint pour ", upgrade_id)
+		return false
+	
+	# Calcule le coût et vérifie les fonds.
+	var cost = int(upgrade_def.base_cost * pow(upgrade_def.cost_increase_factor, current_level))
+	if gems < cost:
+		print("Pas assez de gems pour ", upgrade_id)
+		return false
+	
+	# Applique la transaction et met à jour les stats.
+	gems -= cost
+	upgrade_levels[upgrade_id] += 1
+	recalculate_stats_from_upgrades() # Recalcule les stats internes au DataManager.
+	
+	# Met à jour la stat externe (HatchingLogic) après l'achat.
+	if upgrade_id == "hatch_max":
+		var hatching_logic = get_tree().get_first_node_in_group("hatching_logic")
+		if hatching_logic:
+			hatching_logic.NumberOfEggMax += upgrade_def.increase_per_level
 
-# 🔹 Calcule le multiplicateur de Luck total basé sur l'équipe.
+	gems_updated.emit(gems)
+	SaveManager.save_game_data()
+	print("Amélioration '%s' achetée ! Nouveau niveau: %d" % [upgrade_id, upgrade_levels[upgrade_id]])
+	return true
+
+# 🔹 Recalcule les stats affectées par les améliorations (appelé au chargement et à l'achat).
+func recalculate_stats_from_upgrades():
+	# Réinitialise aux valeurs de base.
+	max_equipped_pets = 5
+	permanent_luck_boost = 1.0
+	
+	# Applique le bonus des slots d'équipe.
+	var team_slots_level = upgrade_levels.get("team_slots", 0)
+	if team_slots_level > 0:
+		max_equipped_pets += GEM_UPGRADES.team_slots.increase_per_level * team_slots_level
+	
+	# Applique le bonus de chance permanente.
+	var perm_luck_level = upgrade_levels.get("permanent_luck", 0)
+	if perm_luck_level > 0:
+		permanent_luck_boost += GEM_UPGRADES.permanent_luck.increase_per_level * perm_luck_level
+	
+	print("Stats permanentes recalculées à partir des niveaux d'amélioration.")
+
+
+# --- Getters et Calculs de Stats ---
+
+# 🔹 Calcule le multiplicateur total de chance (pets équipés + bonus permanent).
 func get_total_luck_boost() -> float:
 	var total_multiplier = 1.0
 	for pet_id in equipped_pets:
 		var pet_instance = get_pet_by_id(pet_id)
 		if not pet_instance.is_empty():
-			total_multiplier *= pet_instance["stats"]["LuckBoost"]
-	return total_multiplier
+			total_multiplier *= pet_instance.stats.LuckBoost
+	return total_multiplier * permanent_luck_boost
 
-# 🔹 Calcule le multiplicateur de Vitesse total basé sur l'équipe.
+# 🔹 Calcule le multiplicateur total de vitesse d'éclosion.
 func get_total_speed_boost() -> float:
 	var total_multiplier = 1.0
 	for pet_id in equipped_pets:
 		var pet_instance = get_pet_by_id(pet_id)
 		if not pet_instance.is_empty():
-			total_multiplier *= pet_instance["stats"]["SpeedBoost"]
+			total_multiplier *= pet_instance.stats.SpeedBoost
 	return total_multiplier
 
-# 🔹 Calcule le gain de Coins par seconde basé sur l'équipe.
+# 🔹 Calcule le gain total de pièces par seconde.
 func get_coins_per_second() -> float:
 	var base_rate = 1.0
 	var total_multiplier = 1.0
 	for pet_id in equipped_pets:
 		var pet_instance = get_pet_by_id(pet_id)
 		if not pet_instance.is_empty():
-			total_multiplier *= pet_instance["stats"]["CoinBoost"]
+			total_multiplier *= pet_instance.stats.CoinBoost
 	return base_rate * total_multiplier
 
+# 🔹 Calcule le taux de génération de gemmes attendu par seconde (pour affichage).
 func get_gems_per_second_chance() -> float:
-	# TODO: Calculer en fonction des pets équipés
-	return 0.0
+	var total_chance_per_second = 0.0
+	for pet_id in equipped_pets:
+		var pet_instance = get_pet_by_id(pet_id)
+		if pet_instance.is_empty(): continue
+		
+		var combined_chance_percent = get_combined_chance(pet_instance)
+		if combined_chance_percent > 0 and combined_chance_percent <= 0.1:
+			var denominator = 1.0 / (combined_chance_percent / 100.0)
+			total_chance_per_second += (denominator / 1000.0) / 1000.0
+	
+	return total_chance_per_second * 100.0
+
+# 🔹 Calcule le bonus à ajouter au nombre maximal d'œufs à éclore.
+func get_hatch_max_bonus() -> int:
+	var level = upgrade_levels.get("hatch_max", 0)
+	return GEM_UPGRADES.hatch_max.increase_per_level * level
+
+# 🔹 Calcule les statistiques finales d'un pet en appliquant son multiplicateur de type.
+func calculate_final_stats(pet_base_name: String, pet_type_info: Dictionary) -> Dictionary:
+	var base_stats = PET_DEFINITIONS[pet_base_name].base_stats.duplicate()
+	var multiplier = pet_type_info.stat_multiplier
+	for stat_name in base_stats:
+		base_stats[stat_name] *= multiplier
+	return base_stats
 
 # 🔹 Calcule la chance combinée (en %) d'obtenir un pet spécifique avec son type.
 func get_combined_chance(pet_instance: Dictionary) -> float:
-	if pet_instance.is_empty():
-		return 100.0
+	if pet_instance.is_empty(): return 100.0
 	
-	var pet_base_name = pet_instance["base_name"]
-	var pet_type_info = pet_instance["type"]
-	
-	# Récupère la chance de base du pet (depuis le premier œuf, pour l'instant).
-	# Note : cette partie devra être améliorée si vous voulez la chance exacte de l'œuf d'origine.
+	var pet_base_name = pet_instance.base_name
+	var pet_type_info = pet_instance.type
 	var base_pet_chance = 100.0
-	if not egg_definitions.is_empty():
-		for pet_in_egg in egg_definitions[0]["pets"]:
-			if pet_in_egg["name"] == pet_base_name:
-				base_pet_chance = pet_in_egg["chance"]
+	
+	# TODO: Améliorer ce système pour trouver la chance dans l'œuf d'origine du pet.
+	if not EGG_DEFINITIONS.is_empty():
+		for pet_in_egg in EGG_DEFINITIONS[0].pets:
+			if pet_in_egg.name == pet_base_name:
+				base_pet_chance = pet_in_egg.chance
 				break
 	
-	if pet_type_info["name"] == "Classic":
+	if pet_type_info.name == "Classic":
 		return base_pet_chance
 	else:
-		var type_chance = pet_type_info["chance"]
-		# Formule: (chance_pet / 100) * (chance_type / 100) * 100
-		return base_pet_chance * type_chance / 100.0
+		return base_pet_chance * pet_type_info.chance / 100.0
 
+
+# --- Gestion de la Progression et de l'Index ---
+
+# 🔹 Met à jour le compteur total d'œufs éclos.
+func increment_eggs_hatched(amount: int):
+	eggs_hatched += amount
+
+# 🔹 Marque un pet comme "découvert" dans l'index du joueur.
+func discover_pet(pet_name: String):
+	if not discovered_pets.has(pet_name):
+		discovered_pets[pet_name] = true
+		print("Nouveau pet découvert pour l'Index : ", pet_name)
+
+# 🔹 Trouve le pet le plus rare possédé par le joueur.
 func get_rarest_pet_owned() -> Dictionary:
 	if player_inventory.is_empty():
 		return {}
-	
+
 	var rarest_pet_so_far = player_inventory[0]
 	var rarest_chance = get_combined_chance(rarest_pet_so_far)
-	
+
 	for i in range(1, player_inventory.size()):
 		var current_pet = player_inventory[i]
 		var current_chance = get_combined_chance(current_pet)
 		if current_chance < rarest_chance:
 			rarest_pet_so_far = current_pet
 			rarest_chance = current_chance
-			
+	
 	return rarest_pet_so_far
 
+# 🔹 Calcule le pourcentage de complétion de l'index des pets.
 func get_index_completion() -> float:
-	if pet_definitions.size() == 0:
+	if PET_DEFINITIONS.size() == 0:
 		return 0.0
 	
 	var discovered_count = discovered_pets.size()
-	var total_pets = pet_definitions.size()
+	var total_pets = PET_DEFINITIONS.size()
 	return (float(discovered_count) / float(total_pets)) * 100.0
-
-# 🔹 Met à jour le nombre d'œufs ouverts.
-func increment_eggs_hatched(amount: int):
-	eggs_hatched += amount
-
-# 🔹 Marque un pet comme découvert.
-func discover_pet(pet_name: String):
-	if not discovered_pets.has(pet_name):
-		discovered_pets[pet_name] = true
-		print("Nouveau pet découvert pour l'Index : ", pet_name)

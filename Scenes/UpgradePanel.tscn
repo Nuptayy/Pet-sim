@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://cpqw4br0sscbk"]
+
+[node name="UpgradePanel" type="PanelContainer"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="NameLabel" type="Label" parent="."]
+layout_mode = 2
+
+[node name="DescriptionLabel" type="Label" parent="."]
+layout_mode = 2
+
+[node name="PriceLabel" type="Label" parent="."]
+layout_mode = 2
+
+[node name="LevelLabel" type="Label" parent="."]
+layout_mode = 2
+
+[node name="BuyLabel" type="Label" parent="."]
+layout_mode = 2
