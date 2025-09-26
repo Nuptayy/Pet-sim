@@ -7,6 +7,7 @@ signal inventory_updated
 signal total_pet_count_changed(new_count)
 signal equipped_pets_changed
 signal gems_updated(new_gem_count)
+signal upgrades_changed
 
 # ==============================================================================
 # 1. DÉFINITIONS STATIQUES DU JEU
@@ -272,13 +273,8 @@ func purchase_upgrade(upgrade_id: String) -> bool:
 	upgrade_levels[upgrade_id] += 1
 	recalculate_stats_from_upgrades() # Recalcule les stats internes au DataManager.
 	
-	# Met à jour la stat externe (HatchingLogic) après l'achat.
-	if upgrade_id == "hatch_max":
-		var hatching_logic = get_tree().get_first_node_in_group("hatching_logic")
-		if hatching_logic:
-			hatching_logic.NumberOfEggMax += upgrade_def.increase_per_level
-
 	gems_updated.emit(gems)
+	upgrades_changed.emit()
 	SaveManager.save_game_data()
 	print("Amélioration '%s' achetée ! Nouveau niveau: %d" % [upgrade_id, upgrade_levels[upgrade_id]])
 	return true

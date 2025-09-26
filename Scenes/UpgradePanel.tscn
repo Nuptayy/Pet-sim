@@ -1,20 +1,27 @@
-[gd_scene format=3 uid="uid://cpqw4br0sscbk"]
+[gd_scene load_steps=2 format=3 uid="uid://cpqw4br0sscbk"]
+
+[ext_resource type="Script" uid="uid://beegcp5xw4opq" path="res://Scripts/UpgradePanel.gd" id="1_1ej6j"]
 
 [node name="UpgradePanel" type="PanelContainer"]
+custom_minimum_size = Vector2(50, 50)
 offset_right = 40.0
 offset_bottom = 40.0
+script = ExtResource("1_1ej6j")
 
-[node name="NameLabel" type="Label" parent="."]
+[node name="HBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
 
-[node name="DescriptionLabel" type="Label" parent="."]
+[node name="VBoxContainer" type="HBoxContainer" parent="HBoxContainer"]
 layout_mode = 2
 
-[node name="PriceLabel" type="Label" parent="."]
+[node name="UpgradeNameLabel" type="Label" parent="HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 
-[node name="LevelLabel" type="Label" parent="."]
+[node name="LevelLabel" type="Label" parent="HBoxContainer/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 
-[node name="BuyLabel" type="Label" parent="."]
+[node name="BuyButton" type="Button" parent="HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2

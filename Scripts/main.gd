@@ -5,6 +5,7 @@ extends Node
 @onready var hatching_screen: PanelContainer = %HatchingScreen
 @onready var inventory_screen: PanelContainer = %InventoryScreen
 @onready var index_screen: PanelContainer = %IndexScreen
+@onready var gem_shop = %GemShop
 @onready var pause_menu = %PauseMenu
 @onready var hatching_logic: Node = %HatchingLogic
 @onready var hatching_animation_scene: Node3D = %HatchingAnimation
@@ -39,6 +40,7 @@ func _ready():
 	hatching_screen.hatch_requested.connect(on_hatch_requested)
 	inventory_screen.close_requested.connect(func(): set_game_state("hatching"))
 	index_screen.close_requested.connect(index_screen.hide)
+	hatching_screen.get_node("%GemShopButton").pressed.connect(gem_shop.show)
 	
 	# Signaux de l'animation d'éclosion
 	hatching_logic.animation_started.connect(func(): set_game_state("animating"))
@@ -48,6 +50,7 @@ func _ready():
 	var options_menu = pause_menu.get_node("OptionsMenu")
 	options_menu.graphic_settings_changed.connect(apply_quality_setting)
 	DataManager.gems_updated.connect(_update_hud_gems)
+	DataManager.upgrades_changed.connect(_on_upgrades_changed)
 	
 	# --- Bloc 3: Configuration Finale de l'UI et État de Départ ---
 	hatching_screen.get_node("%IndexButton").pressed.connect(index_screen.show)
@@ -59,6 +62,8 @@ func _ready():
 	
 	# Applique les paramètres graphiques
 	apply_quality_setting(SaveManager.load_setting("display/quality_index", 2))
+	
+	_on_upgrades_changed()
 	
 	# Définit l'état de jeu initial
 	set_game_state("hatching")
@@ -161,6 +166,15 @@ func on_hatch_requested(egg_name: String, count: int):
 		return
 	hatching_logic.on_hatch_requested(egg_name, count)
 
+# 🔹 Met à jour les éléments de jeu qui dépendent des améliorations permanentes.
+func _on_upgrades_changed():
+	# Recalcule le nombre max d'œufs à éclore.
+	var base_hatch_max = hatching_logic.base_hatch_max
+	var bonus_hatch_max = DataManager.get_hatch_max_bonus()
+	hatching_logic.NumberOfEggMax = base_hatch_max + bonus_hatch_max
+	
+	# Demande à l'écran d'éclosion de se mettre à jour avec les nouvelles valeurs.
+	hatching_screen.setup(hatching_logic)
 
 # --- Fonctions de Mise à Jour de l'UI et des Paramètres ---
 
