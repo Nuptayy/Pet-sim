@@ -23,6 +23,7 @@ const MAX_PETS = 250 # TODO: Rendre cette valeur dynamique via DataManager
 @onready var luck_boost_label: Label = %LuckBoostLabel
 @onready var speed_boost_label: Label = %SpeedBoostLabel
 @onready var equip_button: Button = %EquipButton
+@onready var fuse_button: Button = %FuseButton
 
 # --- État ---
 var current_selected_pet_id: int = -1
@@ -36,6 +37,7 @@ func _ready():
 	
 	# Connexions des boutons
 	%CloseButton.pressed.connect(func(): close_requested.emit())
+	%FuseButton.pressed.connect(_on_fuse_pressed)
 	%EquipButton.pressed.connect(_on_equip_pressed)
 	%DeleteButton.pressed.connect(_on_delete_pressed)
 	
@@ -97,6 +99,11 @@ func display_pet_details(pet_id: int):
 
 # --- Fonctions de Rappel (Signal Callbacks) ---
 
+# 🔹 Gère l'action du bouton "Fuse".
+func _on_fuse_pressed():
+	if current_selected_pet_id != -1:
+		DataManager.fuse_pets(current_selected_pet_id)
+
 # 🔹 Gère l'action du bouton "Equip"/"Unequip".
 func _on_equip_pressed():
 	if current_selected_pet_id == -1: return
@@ -137,7 +144,7 @@ func _on_visibility_changed():
 # --- Méthodes Internes de Mise à Jour de l'UI ---
 
 # 🔹 Met à jour les labels du panneau de détails avec les informations d'un pet.
-func _update_details_panel(pet_data: Dictionary):
+func _update_details_panel(pet_data: Dictionary):	
 	var base_pet_def = DataManager.PET_DEFINITIONS[pet_data.base_name]
 	var rarity_def = DataManager.RARITIES[base_pet_def.rarity]
 	
@@ -153,6 +160,36 @@ func _update_details_panel(pet_data: Dictionary):
 	speed_boost_label.text = "Speed Boost: x%s" % pet_data.stats.SpeedBoost
 	
 	_update_equip_button_state(pet_data.unique_id)
+	_update_fuse_button_state(pet_data)
+
+# 🔹 Met à jour l'état (texte, visibilité, état cliquable) du bouton de fusion.
+func _update_fuse_button_state(pet_data: Dictionary):
+	var pet_species = pet_data.base_name
+	var current_type_order = pet_data.type.order
+	var required_amount = 10
+
+	# Vérifie s'il existe un type supérieur.
+	var next_type_exists = false
+	for pet_type in DataManager.PET_TYPES:
+		if pet_type.order == current_type_order + 1:
+			next_type_exists = true
+			break
+	
+	if not next_type_exists:
+		fuse_button.text = "Max Type"
+		fuse_button.disabled = true
+		fuse_button.visible = true
+		return
+
+	# Compte le nombre de pets identiques possédés.
+	var count_owned = 0
+	for p in DataManager.player_inventory:
+		if p.base_name == pet_species and p.type.order == current_type_order:
+			count_owned += 1
+			
+	fuse_button.text = "Fuse: %d/%d" % [count_owned, required_amount]
+	fuse_button.disabled = count_owned < required_amount
+	fuse_button.visible = true
 
 # 🔹 Met à jour l'état (texte, activé/désactivé) du bouton d'équipement.
 func _update_equip_button_state(pet_id: int):

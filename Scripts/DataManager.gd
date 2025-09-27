@@ -256,6 +256,55 @@ func get_pet_by_id(pet_id: int) -> Dictionary:
 			return pet
 	return {}
 
+# 🔹 Fusionne 10 instances d'un pet pour créer une version de type supérieur.
+func fuse_pets(base_pet_id: int):
+	# 1. Récupérer les informations du pet de base.
+	var base_pet = get_pet_by_id(base_pet_id)
+	if base_pet.is_empty():
+		printerr("Fusion annulée: pet de base non trouvé.")
+		return
+
+	var pet_species = base_pet.base_name
+	var current_type_order = base_pet.type.order
+	var required_amount = 10 # Nombre de pets requis pour la fusion
+
+	# 2. Déterminer le type suivant.
+	var next_type_info = null
+	for pet_type in PET_TYPES:
+		if pet_type.order == current_type_order + 1:
+			next_type_info = pet_type
+			break
+	
+	if next_type_info == null:
+		print("Fusion impossible: type maximum déjà atteint.")
+		return
+
+	# 3. Trouver et collecter les pets à fusionner.
+	var candidates_to_fuse = player_inventory.filter(func(p): return p.base_name == pet_species and p.type.order == current_type_order)
+	
+	if candidates_to_fuse.size() < required_amount:
+		print("Fusion annulée: pas assez de pets candidats.")
+		return
+		
+	# 4. Prioriser la suppression des non-équipés.
+	var non_equipped_candidates = candidates_to_fuse.filter(func(p): return not p.unique_id in equipped_pets)
+	var equipped_candidates = candidates_to_fuse.filter(func(p): return p.unique_id in equipped_pets)
+	
+	var pets_to_remove: Array[Dictionary] = []
+	pets_to_remove.append_array(non_equipped_candidates)
+	pets_to_remove.append_array(equipped_candidates)
+	
+	# Ne prend que le nombre requis.
+	pets_to_remove = pets_to_remove.slice(0, required_amount)
+	
+	# 5. Supprimer les pets consommés.
+	for pet_to_remove in pets_to_remove:
+		remove_pet_by_id(pet_to_remove.unique_id)
+		
+	# 6. Ajouter le nouveau pet fusionné.
+	add_pet_to_inventory(pet_species, next_type_info)
+	
+	print("Fusion réussie ! Création de 1x %s %s" % [next_type_info.name, pet_species])
 
 # --- Gestion des Améliorations (Gem Shop) ---
 
