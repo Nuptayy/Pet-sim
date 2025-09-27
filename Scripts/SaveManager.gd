@@ -105,6 +105,7 @@ func save_game_data():
 	_save_player_index(config)
 	_save_player_upgrades(config)
 	_save_auto_delete_filters(config)
+	_save_index_status(config)
 	
 	DirAccess.make_dir_recursive_absolute("user://saves")
 	config.save(GAME_DATA_PATH)
@@ -123,6 +124,7 @@ func load_game_data():
 	_load_player_index(config)
 	_load_player_upgrades(config)
 	_load_auto_delete_filters(config)
+	_load_index_status(config)
 	
 	DataManager.recalculate_stats_from_upgrades()
 	DataManager.inventory_updated.emit()
@@ -211,3 +213,9 @@ func _save_auto_delete_filters(config: ConfigFile):
 
 func _load_auto_delete_filters(config: ConfigFile):
 	DataManager.auto_delete_filters = config.get_value("AutoDelete", "filters", {})
+
+func _save_index_status(config: ConfigFile):
+	config.set_value("Index", "status", DataManager.egg_index_status)
+
+func _load_index_status(config: ConfigFile):
+	DataManager.egg_index_status = config.get_value("Index", "status", {})

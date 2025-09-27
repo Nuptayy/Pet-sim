@@ -69,10 +69,12 @@ func _add_egg_section(egg_definition: Dictionary):
 	for pet_info_in_egg in pets_in_this_egg:
 		var pet_name = pet_info_in_egg.name
 		var is_discovered = DataManager.discovered_pets.has(pet_name)
-
-		var slot = INDEX_SLOT_SCENE.instantiate()
-		pet_grid.add_child(slot)
-		slot.setup(pet_name, is_discovered)
+		
+		var is_secret = pet_name in egg_definition.secret_pets
+		if not is_secret or (is_secret and is_discovered):
+			var slot = INDEX_SLOT_SCENE.instantiate()
+			pet_grid.add_child(slot)
+			slot.setup(pet_name, is_discovered)
 
 # 🔹 Crée et ajoute un séparateur visuel entre les sections d'œufs.
 func _create_separator():

@@ -9,6 +9,7 @@ extends Node
 @onready var pause_menu = %PauseMenu
 @onready var hatching_logic: Node = %HatchingLogic
 @onready var hatching_animation_scene: Node3D = %HatchingAnimation
+@onready var debug_menu = %DebugMenu
 # Références aux labels du HUD
 @onready var coins_label: Label = %HatchingScreen.find_child("CoinsLabel", true)
 @onready var gems_label: Label = %HatchingScreen.find_child("GemsLabel", true)
@@ -74,9 +75,16 @@ func _process(_delta: float):
 
 # 🔹 Gère les entrées clavier globales du joueur (pause, inventaire, raccourcis).
 func _input(event: InputEvent):
+	# Priorité 0 : Le menu debug a la priorité sur tout.
+	if event.is_action_pressed("toggle_debug_menu"):
+		debug_menu.toggle_menu(not debug_menu.visible)
+		return # On ne traite rien d'autre
+
 	# Priorité 1: Gestion de la pause (touche Echap)
 	if event.is_action_pressed("ui_cancel"):
-		toggle_pause()
+		# On ne peut pas pauser/dépauser si le menu debug est ouvert
+		if not debug_menu.visible:
+			toggle_pause()
 		return
 	
 	# Ignore les autres inputs si le jeu est en pause.

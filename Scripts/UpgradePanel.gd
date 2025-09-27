@@ -17,7 +17,7 @@ func setup(upgrade_id: String):
 	self.tooltip_text = upgrade_def.description 
 	
 	# Calcule le coût du prochain niveau.
-	var cost = int(upgrade_def.base_cost * pow(upgrade_def.cost_increase_factor, current_level))
+	var cost = DataManager.get_upgrade_cost(upgrade_id)
 	
 	# Gère l'affichage si le niveau max est atteint.
 	if upgrade_def.max_level != -1 and current_level >= upgrade_def.max_level:

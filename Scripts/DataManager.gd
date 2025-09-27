@@ -8,6 +8,7 @@ signal total_pet_count_changed(new_count)
 signal equipped_pets_changed
 signal gems_updated(new_gem_count)
 signal upgrades_changed
+signal index_status_changed
 
 # ==============================================================================
 # 1. DÉFINITIONS STATIQUES DU JEU
@@ -54,7 +55,7 @@ const PET_DEFINITIONS = {
 const EGG_DEFINITIONS = [
 	{
 		"name": "Basic Egg",
-		"cost": 100,
+		"cost": 10,
 		"model": preload("res://Scenes/Egg.tscn"),
 		"pets": [
 			{"name": "Cat",    "chance": 50.0},
@@ -63,7 +64,9 @@ const EGG_DEFINITIONS = [
 			{"name": "Test1",  "chance": 4.9989},
 			{"name": "Test2",  "chance": 0.001},
 			{"name": "Test3",  "chance": 0.0001}
-		]
+		],
+		"secret_pets": ["Test3"],
+		"reward": {"type": "gems", "value": 250}
 	}
 ]
 
@@ -72,6 +75,7 @@ const GEM_UPGRADES = {
 	"team_slots": {
 		"name": "Extra Team Slot",
 		"description": "Ajoute un slot à votre équipe de pets.",
+		"cost_formula": "exponential",
 		"base_cost": 100,
 		"cost_increase_factor": 2.5,
 		"max_level": 10,
@@ -80,16 +84,18 @@ const GEM_UPGRADES = {
 	"hatch_max": {
 		"name": "Increase Hatch Max",
 		"description": "Permet d'ouvrir un œuf de plus à la fois.",
+		"cost_formula": "exponential",
 		"base_cost": 50,
 		"cost_increase_factor": 2.0,
 		"max_level": 20,
 		"increase_per_level": 1
 	},
 	"permanent_luck": {
-		"name": "Permanent Luck",
-		"description": "Augmente votre chance permanente de 10%.",
+		"name": "Permanent Luck", "description": "Augmente votre chance permanente de 10%.",
+		"cost_formula": "polynomial",
 		"base_cost": 250,
-		"cost_increase_factor": 1.5,
+		"cost_exponent": 1.4,
+		"cost_multiplier": 5,
 		"max_level": -1,
 		"increase_per_level": 0.1
 	}
@@ -118,6 +124,7 @@ var max_equipped_pets: int = 5 # Valeur de base, modifiée par les amélioration
 # --- Index et Filtres ---
 var discovered_pets: Dictionary = {} # Clé: nom du pet, Valeur: true
 var auto_delete_filters: Dictionary = {}
+var egg_index_status: Dictionary = {}
 
 # --- Améliorations Permanentes ---
 var permanent_luck_boost: float = 1.0 # Valeur de base, modifiée par les améliorations
@@ -145,6 +152,11 @@ func _ready():
 	for egg_def in EGG_DEFINITIONS:
 		if not auto_delete_filters.has(egg_def.name):
 			auto_delete_filters[egg_def.name] = {}
+	
+	# Initialise les statuts d'index s'ils n'existent pas.
+	for egg_def in EGG_DEFINITIONS:
+		if not egg_index_status.has(egg_def.name):
+			egg_index_status[egg_def.name] = "not_completed"
 	
 	# Crée le timer pour les gains passifs (chaque seconde).
 	one_second_timer = Timer.new()
@@ -211,7 +223,6 @@ func add_pet_to_inventory(pet_base_name: String, pet_type_info: Dictionary):
 	player_inventory.append(new_pet_instance)
 	next_pet_unique_id += 1
 	
-	discover_pet(pet_base_name)
 	inventory_updated.emit()
 	total_pet_count_changed.emit(player_inventory.size())
 
@@ -248,6 +259,22 @@ func get_pet_by_id(pet_id: int) -> Dictionary:
 
 # --- Gestion des Améliorations (Gem Shop) ---
 
+# 🔹 Calcule le coût du prochain niveau pour une amélioration donnée.
+func get_upgrade_cost(upgrade_id: String) -> int:
+	if not GEM_UPGRADES.has(upgrade_id): return -1
+
+	var upgrade_def = GEM_UPGRADES[upgrade_id]
+	var current_level = upgrade_levels.get(upgrade_id, 0)
+	var cost = 0
+
+	match upgrade_def.cost_formula:
+		"exponential":
+			cost = int(upgrade_def.base_cost * pow(upgrade_def.cost_increase_factor, current_level))
+		"polynomial":
+			cost = upgrade_def.base_cost + int(pow(current_level, upgrade_def.cost_exponent) * upgrade_def.cost_multiplier)
+
+	return cost
+
 # 🔹 Gère la logique d'achat et d'application d'une amélioration.
 func purchase_upgrade(upgrade_id: String) -> bool:
 	if not GEM_UPGRADES.has(upgrade_id):
@@ -263,9 +290,9 @@ func purchase_upgrade(upgrade_id: String) -> bool:
 		return false
 	
 	# Calcule le coût et vérifie les fonds.
-	var cost = int(upgrade_def.base_cost * pow(upgrade_def.cost_increase_factor, current_level))
-	if gems < cost:
-		print("Pas assez de gems pour ", upgrade_id)
+	var cost = get_upgrade_cost(upgrade_id)
+	if cost == -1 or gems < cost:
+		print("Achat impossible pour ", upgrade_id)
 		return false
 	
 	# Applique la transaction et met à jour les stats.
@@ -383,10 +410,11 @@ func increment_eggs_hatched(amount: int):
 	eggs_hatched += amount
 
 # 🔹 Marque un pet comme "découvert" dans l'index du joueur.
-func discover_pet(pet_name: String):
+func discover_pet(pet_name: String, egg_name: String):
 	if not discovered_pets.has(pet_name):
 		discovered_pets[pet_name] = true
 		print("Nouveau pet découvert pour l'Index : ", pet_name)
+		_check_for_index_completion(egg_name)
 
 # 🔹 Trouve le pet le plus rare possédé par le joueur.
 func get_rarest_pet_owned() -> Dictionary:
@@ -413,3 +441,78 @@ func get_index_completion() -> float:
 	var discovered_count = discovered_pets.size()
 	var total_pets = PET_DEFINITIONS.size()
 	return (float(discovered_count) / float(total_pets)) * 100.0
+
+# 🔹 Vérifie si l'index d'un œuf est complété après une nouvelle découverte.
+func _check_for_index_completion(egg_name: String):
+	# Si l'état de l'œuf n'est pas "not_completed", on ne fait rien (déjà prêt ou réclamé).
+	if egg_index_status.get(egg_name, "not_completed") != "not_completed":
+		return
+
+	var egg_def = EGG_DEFINITIONS.filter(func(e): return e.name == egg_name).front()
+	if not egg_def: return
+
+	# On récupère la liste des pets requis (tous sauf les secrets).
+	var required_pets = egg_def.pets.map(func(p): return p.name)
+	for secret_pet_name in egg_def.secret_pets:
+		required_pets.erase(secret_pet_name)
+	
+	# On vérifie si tous les pets requis ont été découverts.
+	for pet_name in required_pets:
+		if not discovered_pets.has(pet_name):
+			return
+			
+	# Si on arrive ici, c'est que tous les pets sont découverts !
+	print("Index pour '%s' complété ! Prêt à être réclamé." % egg_name)
+	egg_index_status[egg_name] = "ready_to_claim"
+	index_status_changed.emit()
+
+# 🔹 Gère la réclamation de la récompense d'un index d'œuf.
+func claim_index_reward(egg_name: String):
+	if egg_index_status.get(egg_name) != "ready_to_claim":
+		printerr("Tentative de réclamer une récompense non prête pour l'œuf: ", egg_name)
+		return
+		
+	var egg_def = EGG_DEFINITIONS.filter(func(e): return e.name == egg_name).front()
+	if not egg_def: return
+
+	var reward = egg_def.reward
+	
+	# Applique la récompense
+	match reward.type:
+		"gems":
+			gems += reward.value
+			total_gems_earned += reward.value
+			gems_updated.emit(gems)
+		"coins":
+			coins += reward.value
+			total_coins_earned += reward.value
+		# TODO: Ajouter les cas pour "permanent_luck", etc. si besoin
+	
+	print("Récompense de %s %s réclamée pour l'index de '%s' !" % [reward.value, reward.type, egg_name])
+	
+	# Met à jour le statut et notifie l'UI.
+	egg_index_status[egg_name] = "claimed"
+	index_status_changed.emit()
+	SaveManager.save_game_data()
+
+
+# ==============================================================================
+# 4. FONCTIONS DE DÉBOGAGE
+# ==============================================================================
+
+# 🔹 [DEBUG] Ajoute un montant de pièces.
+func debug_add_coins(amount: float):
+	coins += amount
+	print("DEBUG: Added %f coins." % amount)
+
+# 🔹 [DEBUG] Ajoute un montant de gemmes.
+func debug_add_gems(amount: int):
+	gems += amount
+	gems_updated.emit(gems)
+	print("DEBUG: Added %d gems." % amount)
+
+# 🔹 [DEBUG] Définit une nouvelle valeur pour le multiplicateur de chance permanent.
+func debug_set_luck(new_luck_value: float):
+	permanent_luck_boost = new_luck_value
+	upgrades_changed.emit() # Pour que l'UI se mette à jour
+	print("DEBUG: Permanent luck set to %f." % new_luck_value)

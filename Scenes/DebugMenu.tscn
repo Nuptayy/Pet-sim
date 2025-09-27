@@ -1,0 +1,85 @@
+[gd_scene load_steps=3 format=3 uid="uid://cvgn2d0nur7xm"]
+
+[ext_resource type="Script" uid="uid://bdlksu0qs6rgg" path="res://Scripts/DebugMenu.gd" id="1_w86ti"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_je6ja"]
+bg_color = Color(0.58431375, 0.58431375, 0.58431375, 1)
+
+[node name="DebugMenu" type="PanelContainer"]
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_je6ja")
+script = ExtResource("1_w86ti")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Give Coins" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/Give Coins"]
+layout_mode = 2
+text = "Coins"
+
+[node name="CoinsInput" type="LineEdit" parent="VBoxContainer/Give Coins"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Amount"
+
+[node name="GiveCoinsButton" type="Button" parent="VBoxContainer/Give Coins"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Give"
+
+[node name="Give Gems" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/Give Gems"]
+layout_mode = 2
+text = "Gems"
+
+[node name="GemsInput" type="LineEdit" parent="VBoxContainer/Give Gems"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Amount"
+
+[node name="GiveGemsButton" type="Button" parent="VBoxContainer/Give Gems"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Give"
+
+[node name="Set Luck" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/Set Luck"]
+layout_mode = 2
+text = "Luck"
+
+[node name="LuckInput" type="LineEdit" parent="VBoxContainer/Set Luck"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Multiplier"
+
+[node name="SetLuckButton" type="Button" parent="VBoxContainer/Set Luck"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Set"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="PetSelectDropdown" type="OptionButton" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="GivePetButton" type="Button" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Give
+"
+
+[node name="CloseButton" type="Button" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close
+"

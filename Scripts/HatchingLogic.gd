@@ -128,6 +128,7 @@ func _roll_all_pets(egg_name: String, count: int) -> Array[Dictionary]:
 	# Applique les filtres d'auto-delete.
 	var filters = DataManager.auto_delete_filters.get(egg_name, {})
 	for pet_data in pets_to_hatch:
+		DataManager.discover_pet(pet_data.base_name, egg_name)
 		var pet_def = DataManager.PET_DEFINITIONS[pet_data.base_name]
 		var rarity = pet_def.rarity
 		var type_name = pet_data.type.name

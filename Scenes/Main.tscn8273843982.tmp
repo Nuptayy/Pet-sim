@@ -1,0 +1,78 @@
+[gd_scene load_steps=13 format=3 uid="uid://b0kujnmv7o114"]
+
+[ext_resource type="Script" uid="uid://div21lpici42h" path="res://Scripts/main.gd" id="1_kln2b"]
+[ext_resource type="Script" uid="uid://bn1j1qcdph05b" path="res://Scripts/HatchingLogic.gd" id="2_pbw6q"]
+[ext_resource type="PackedScene" uid="uid://bkoqp428qpx3f" path="res://Scenes/HatchingScreen.tscn" id="2_rgh2o"]
+[ext_resource type="PackedScene" uid="uid://ch0ctkc3lfu03" path="res://Scenes/InventoryScreen.tscn" id="3_pbw6q"]
+[ext_resource type="PackedScene" uid="uid://qa3lkyblum14" path="res://Scenes/HatchingAnimation.tscn" id="3_v1gob"]
+[ext_resource type="PackedScene" uid="uid://bee8rw8sghx4v" path="res://Scenes/GemShop.tscn" id="6_50glp"]
+[ext_resource type="PackedScene" uid="uid://d0gcwbbxexq4v" path="res://Scenes/IndexScreen.tscn" id="6_jw32o"]
+[ext_resource type="PackedScene" uid="uid://bvphfig2ptm8j" path="res://Scenes/PauseMenu.tscn" id="6_v1gob"]
+[ext_resource type="PackedScene" uid="uid://cvgn2d0nur7xm" path="res://Scenes/DebugMenu.tscn" id="7_vy5pj"]
+
+[sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_jw32o"]
+
+[sub_resource type="Sky" id="Sky_50glp"]
+sky_material = SubResource("PhysicalSkyMaterial_jw32o")
+
+[sub_resource type="Environment" id="Environment_vy5pj"]
+sky = SubResource("Sky_50glp")
+
+[node name="Main" type="Node"]
+process_mode = 3
+script = ExtResource("1_kln2b")
+
+[node name="HatchingLogic" type="Node" parent="." groups=["hatching_logic"]]
+unique_name_in_owner = true
+script = ExtResource("2_pbw6q")
+base_hatch_max = null
+global_egg_scale_multiplier = null
+low_tier_rarities = null
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="HatchingScreen" parent="UILayer" instance=ExtResource("2_rgh2o")]
+unique_name_in_owner = true
+
+[node name="InventoryScreen" parent="UILayer" instance=ExtResource("3_pbw6q")]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="IndexScreen" parent="UILayer" instance=ExtResource("6_jw32o")]
+unique_name_in_owner = true
+visible = false
+
+[node name="GemShop" parent="UILayer" instance=ExtResource("6_50glp")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(500, 400)
+
+[node name="DebugMenu" parent="UILayer" instance=ExtResource("7_vy5pj")]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -81.0
+offset_top = -85.5
+offset_right = 81.0
+offset_bottom = 85.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HatchingAnimation" parent="." instance=ExtResource("3_v1gob")]
+unique_name_in_owner = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_vy5pj")
+
+[node name="PauseMenu" parent="." instance=ExtResource("6_v1gob")]
+unique_name_in_owner = true
