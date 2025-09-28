@@ -29,7 +29,7 @@ func open_for_egg(egg_name: String):
 	rarity_groups.clear()
 	
 	var egg_filters = DataManager.auto_delete_filters.get(egg_name, {})
-	var all_rarity_names = DataManager.RARITIES.keys
+	var all_rarity_names: Array = DataManager.RARITIES.keys()
 	all_rarity_names.sort_custom(func(a, b):
 		return DataManager.RARITIES[a].order < DataManager.RARITIES[b].order
 	)
