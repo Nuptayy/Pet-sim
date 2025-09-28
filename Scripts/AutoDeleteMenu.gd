@@ -23,24 +23,28 @@ func open_for_egg(egg_name: String):
 	self.current_egg_name = egg_name
 	%EggNameLabel.text = "Auto-Delete pour %s" % egg_name
 	
-	# Vide l'affichage et les références des filtres précédents.
 	var rarity_list_container = %RarityList
 	for child in rarity_list_container.get_children():
-		child.queue_free()
+		child.free()
 	rarity_groups.clear()
 	
-	# Récupère les données nécessaires depuis le DataManager.
 	var egg_filters = DataManager.auto_delete_filters.get(egg_name, {})
-	var all_rarity_names = DataManager.RARITIES.keys()
+	var all_rarity_names = DataManager.RARITIES.keys
 	all_rarity_names.sort_custom(func(a, b):
 		return DataManager.RARITIES[a].order < DataManager.RARITIES[b].order
 	)
 	
-	# Construit la nouvelle liste de filtres.
+	# Récupère la liste des types découverts depuis la source unique.
+	var discovered_types_names = DataManager.get_discovered_types()
+	var discovered_types_data = DataManager.PET_TYPES.filter(func(t): return t.name in discovered_types_names)
+	
 	for rarity_name in all_rarity_names:
 		var current_type_filters = egg_filters.get(rarity_name, [])
 		var group = RARITY_GROUP_SCENE.instantiate()
-		group.setup(rarity_name, DataManager.PET_TYPES, current_type_filters)
+		
+		# On passe la liste filtrée de types au groupe.
+		group.setup(rarity_name, discovered_types_data, current_type_filters)
+		
 		group.filter_changed.connect(on_filter_changed)
 		rarity_list_container.add_child(group)
 		rarity_groups[rarity_name] = group

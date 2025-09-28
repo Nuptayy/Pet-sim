@@ -66,7 +66,11 @@ const EGG_DEFINITIONS = [
 			{"name": "Test3",  "chance": 0.0001}
 		],
 		"secret_pets": ["Test3"],
-		"reward": {"type": "gems", "value": 250}
+		"rewards": { # <-- "reward" devient "rewards"
+			"Classic": {"type": "gems", "value": 250},
+			"Golden":  {"type": "gems", "value": 1000},
+			"Rainbow": {"type": "permanent_luck", "value": 0.01},
+		}
 	}
 ]
 
@@ -114,6 +118,7 @@ var time_played: int = 0
 var eggs_hatched: int = 0
 var total_coins_earned: float = 0.0
 var total_gems_earned: int = 0
+var rarest_pet_ever_owned: Dictionary = {}
 
 # --- Inventaire et Équipe ---
 var player_inventory: Array[Dictionary] = []
@@ -122,7 +127,8 @@ var next_pet_unique_id: int = 0
 var max_equipped_pets: int = 5 # Valeur de base, modifiée par les améliorations
 
 # --- Index et Filtres ---
-var discovered_pets: Dictionary = {} # Clé: nom du pet, Valeur: true
+var discovered_pets: Dictionary = {}
+var discovered_pet_types: Array[String] = ["Classic"]
 var auto_delete_filters: Dictionary = {}
 var egg_index_status: Dictionary = {}
 
@@ -156,7 +162,12 @@ func _ready():
 	# Initialise les statuts d'index s'ils n'existent pas.
 	for egg_def in EGG_DEFINITIONS:
 		if not egg_index_status.has(egg_def.name):
-			egg_index_status[egg_def.name] = "not_completed"
+			egg_index_status[egg_def.name] = {}
+		
+		# Pour chaque type de récompense défini pour cet œuf.
+		for type_name in egg_def.rewards:
+			if not egg_index_status[egg_def.name].has(type_name):
+				egg_index_status[egg_def.name][type_name] = "not_completed"
 	
 	# Crée le timer pour les gains passifs (chaque seconde).
 	one_second_timer = Timer.new()
@@ -304,6 +315,19 @@ func fuse_pets(base_pet_id: int):
 	# 6. Ajouter le nouveau pet fusionné.
 	add_pet_to_inventory(pet_species, next_type_info)
 	
+	# 7. Découvrir le nouveau pet fusionné.
+	var source_egg_name = ""
+	for egg_def in EGG_DEFINITIONS:
+		for pet_in_egg in egg_def.pets:
+			if pet_in_egg.name == pet_species:
+				source_egg_name = egg_def.name
+				break
+		if not source_egg_name.is_empty():
+			break
+	
+	if not source_egg_name.is_empty():
+		discover_pet(pet_species, source_egg_name, next_type_info)
+
 	print("Fusion réussie ! Création de 1x %s %s" % [next_type_info.name, pet_species])
 
 # --- Gestion des Améliorations (Gem Shop) ---
@@ -374,7 +398,7 @@ func recalculate_stats_from_upgrades():
 	print("Stats permanentes recalculées à partir des niveaux d'amélioration.")
 
 
-# --- Getters et Calculs de Stats ---
+# --- Gets et Calculs de Stats ---
 
 # 🔹 Calcule le multiplicateur total de chance (pets équipés + bonus permanent).
 func get_total_luck_boost() -> float:
@@ -460,6 +484,29 @@ func get_combined_chance(pet_instance: Dictionary) -> float:
 	else:
 		return base_pet_chance * pet_type_info.chance / 100.0
 
+# 🔹 Récupère tous les types de pets uniques que le joueur a déjà possédés.
+func get_discovered_types() -> Array:
+	var discovered_types: Array = []
+	
+	for pet_instance in player_inventory:
+		var type_name = pet_instance.type.name
+		if not type_name in discovered_types:
+			discovered_types.append(type_name)
+			
+	# Assure que le type "Classic" est toujours présent, même si l'inventaire est vide.
+	if not "Classic" in discovered_types:
+		discovered_types.insert(0, "Classic")
+		
+	# Trie la liste selon l'ordre défini dans PET_TYPES pour un affichage cohérent.
+	discovered_types.sort_custom(
+		func(a, b):
+			var order_a = PET_TYPES.filter(func(t): return t.name == a).front().order
+			var order_b = PET_TYPES.filter(func(t): return t.name == b).front().order
+			return order_a < order_b
+	)
+	
+	return discovered_types
+
 
 # --- Gestion de la Progression et de l'Index ---
 
@@ -468,11 +515,36 @@ func increment_eggs_hatched(amount: int):
 	eggs_hatched += amount
 
 # 🔹 Marque un pet comme "découvert" dans l'index du joueur.
-func discover_pet(pet_name: String, egg_name: String):
+func discover_pet(pet_name: String, egg_name: String, type_info: Dictionary):
+	var type_name_param = type_info.name
+	
+	# 1. Découverte de la paire espèce/type
+	var is_new_discovery = false
 	if not discovered_pets.has(pet_name):
-		discovered_pets[pet_name] = true
-		print("Nouveau pet découvert pour l'Index : ", pet_name)
-		_check_for_index_completion(egg_name)
+		discovered_pets[pet_name] = {}
+	
+	if not discovered_pets[pet_name].has(type_name_param):
+		discovered_pets[pet_name][type_name_param] = true
+		is_new_discovery = true
+		print("Nouvelle découverte : %s (%s)" % [pet_name, type_name_param])
+
+	# 2. Découverte du type global (pour les onglets)
+	if not type_name_param in discovered_pet_types:
+		discovered_pet_types.append(type_name_param)
+		print("Nouveau TYPE de pet découvert : ", type_name_param)
+		
+	# 3. Vérification de la complétion (uniquement si une vraie nouvelle découverte a eu lieu)
+	if is_new_discovery:
+		_check_for_index_completion(egg_name, type_name_param)
+
+	# 4. Vérification du record de rareté
+	var new_pet_instance = { "base_name": pet_name, "type": type_info }
+	var new_pet_chance = get_combined_chance(new_pet_instance)
+	var current_rarest_chance = get_combined_chance(rarest_pet_ever_owned)
+
+	if new_pet_chance < current_rarest_chance:
+		rarest_pet_ever_owned = new_pet_instance
+		print("NOUVEAU RECORD: Pet le plus rare jamais obtenu ! ", rarest_pet_ever_owned)
 
 # 🔹 Trouve le pet le plus rare possédé par le joueur.
 func get_rarest_pet_owned() -> Dictionary:
@@ -501,39 +573,56 @@ func get_index_completion() -> float:
 	return (float(discovered_count) / float(total_pets)) * 100.0
 
 # 🔹 Vérifie si l'index d'un œuf est complété après une nouvelle découverte.
-func _check_for_index_completion(egg_name: String):
-	# Si l'état de l'œuf n'est pas "not_completed", on ne fait rien (déjà prêt ou réclamé).
-	if egg_index_status.get(egg_name, "not_completed") != "not_completed":
+func _check_for_index_completion(egg_name: String, type_name_to_check: String):
+	var egg_def_array = EGG_DEFINITIONS.filter(func(e): return e.name == egg_name)
+	if egg_def_array.is_empty(): return
+	var egg_def = egg_def_array.front()
+
+	# On vérifie si une récompense est définie pour ce type, sinon on ne fait rien.
+	if not egg_def.rewards.has(type_name_to_check):
 		return
 
-	var egg_def = EGG_DEFINITIONS.filter(func(e): return e.name == egg_name).front()
-	if not egg_def: return
+	# Si le statut n'est pas "not_completed", on arrête.
+	var current_status = "not_completed"
+	var egg_statuses = egg_index_status.get(egg_name, {})
+	if typeof(egg_statuses) == TYPE_DICTIONARY and egg_statuses.has(type_name_to_check):
+		current_status = egg_statuses[type_name_to_check]
+	if current_status != "not_completed":
+		return
 
-	# On récupère la liste des pets requis (tous sauf les secrets).
+	# On vérifie si tous les pets requis ont été découverts DANS CE TYPE.
+	var all_pets_for_type_discovered = true
 	var required_pets = egg_def.pets.map(func(p): return p.name)
 	for secret_pet_name in egg_def.secret_pets:
 		required_pets.erase(secret_pet_name)
 	
-	# On vérifie si tous les pets requis ont été découverts.
 	for pet_name in required_pets:
-		if not discovered_pets.has(pet_name):
-			return
+		if not (discovered_pets.has(pet_name) and discovered_pets[pet_name].has(type_name_to_check)):
+			all_pets_for_type_discovered = false
+			break
 			
-	# Si on arrive ici, c'est que tous les pets sont découverts !
-	print("Index pour '%s' complété ! Prêt à être réclamé." % egg_name)
-	egg_index_status[egg_name] = "ready_to_claim"
-	index_status_changed.emit()
+	if all_pets_for_type_discovered:
+		print("Index pour '%s' (%s) complété ! Prêt à être réclamé." % [egg_name, type_name_to_check])
+		egg_index_status[egg_name][type_name_to_check] = "ready_to_claim"
+		index_status_changed.emit()
 
 # 🔹 Gère la réclamation de la récompense d'un index d'œuf.
-func claim_index_reward(egg_name: String):
-	if egg_index_status.get(egg_name) != "ready_to_claim":
-		printerr("Tentative de réclamer une récompense non prête pour l'œuf: ", egg_name)
+func claim_index_reward(egg_name: String, type_name: String):
+	var current_status = "not_completed"
+	var egg_statuses = egg_index_status.get(egg_name)
+	
+	if typeof(egg_statuses) == TYPE_DICTIONARY and egg_statuses.has(type_name):
+		current_status = egg_statuses[type_name]
+	
+	if current_status != "ready_to_claim":
+		printerr("Tentative de réclamer une récompense non prête pour l'œuf: %s, type: %s" % [egg_name, type_name])
 		return
-		
-	var egg_def = EGG_DEFINITIONS.filter(func(e): return e.name == egg_name).front()
-	if not egg_def: return
-
-	var reward = egg_def.reward
+	
+	var egg_def_array = EGG_DEFINITIONS.filter(func(e): return e.name == egg_name)
+	if egg_def_array.is_empty(): return
+	var egg_def = egg_def_array.front()
+	
+	var reward = egg_def.rewards[type_name]
 	
 	# Applique la récompense
 	match reward.type:
@@ -544,12 +633,13 @@ func claim_index_reward(egg_name: String):
 		"coins":
 			coins += reward.value
 			total_coins_earned += reward.value
-		# TODO: Ajouter les cas pour "permanent_luck", etc. si besoin
+		"permanent_luck":
+			permanent_luck_boost += reward.value
+			upgrades_changed.emit()
 	
-	print("Récompense de %s %s réclamée pour l'index de '%s' !" % [reward.value, reward.type, egg_name])
+	print("Récompense de %s %s réclamée pour l'index de '%s' (%s) !" % [reward.value, reward.type, egg_name, type_name])
 	
-	# Met à jour le statut et notifie l'UI.
-	egg_index_status[egg_name] = "claimed"
+	egg_index_status[egg_name][type_name] = "claimed"
 	index_status_changed.emit()
 	SaveManager.save_game_data()
 

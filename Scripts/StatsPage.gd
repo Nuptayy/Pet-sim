@@ -46,7 +46,7 @@ func _update_economy_stats():
 
 # 🔹 Met à jour l'affichage du pet le plus rare possédé par le joueur.
 func _update_rarest_pet_stat():
-	var rarest_pet = DataManager.get_rarest_pet_owned()
+	var rarest_pet = DataManager.rarest_pet_ever_owned
 	if not rarest_pet.is_empty():
 		var combined_chance = DataManager.get_combined_chance(rarest_pet)
 		var pet_text = "%s (%s)" % [rarest_pet.base_name, rarest_pet.type.name]
@@ -70,7 +70,7 @@ func _format_seconds_to_hms(seconds: int) -> String:
 	return "%02d:%02d:%02d" % [h, m, s]
 
 # 🔹 Formate un pourcentage de chance en une chaîne de caractères lisible (ex: "1 in 1.5M").
-# TODO: Cette fonction est dupliquée dans InventoryScreen.gd. Envisager de la déplacer
+# TODO: Cette fonction est dupliquée dans InventoryScreen.gd.
 # dans un Autoload "FormatUtils.gd" pour éviter la redondance.
 func _format_chance(chance_percent: float) -> String:
 	if chance_percent <= 0.000001:

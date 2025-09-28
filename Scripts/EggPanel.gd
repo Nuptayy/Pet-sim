@@ -36,9 +36,9 @@ func setup(egg_definition: Dictionary, number_of_egg_max: int):
 	set_meta("egg_definition", egg_definition)
 
 	# Configure l'affichage des boutons.
-	%Hatch1Button.text = "Hatch 1 (%d Coins)" % egg_definition.cost
-	%HatchMaxButton.text = "Hatch %d" % number_of_egg_max
-	%AutoHatchButton.text = "Auto Hatch"
+	%Hatch1Button.text = "(E) Hatch 1 (%d Coins)" % egg_definition.cost
+	%HatchMaxButton.text = "(R) Hatch %d" % number_of_egg_max
+	%AutoHatchButton.text = "(T) Auto Hatch"
 	%SelectButton.text = "Select"
 	
 	# Connecte les signaux des boutons.

@@ -106,6 +106,7 @@ func save_game_data():
 	_save_player_upgrades(config)
 	_save_auto_delete_filters(config)
 	_save_index_status(config)
+	_save_discovered_types(config)
 	
 	DirAccess.make_dir_recursive_absolute("user://saves")
 	config.save(GAME_DATA_PATH)
@@ -125,6 +126,7 @@ func load_game_data():
 	_load_player_upgrades(config)
 	_load_auto_delete_filters(config)
 	_load_index_status(config)
+	_load_discovered_types(config)
 	
 	DataManager.recalculate_stats_from_upgrades()
 	DataManager.inventory_updated.emit()
@@ -142,6 +144,9 @@ func _save_player_stats(config: ConfigFile):
 	config.set_value("PlayerData", "eggs_hatched", DataManager.eggs_hatched)
 	config.set_value("PlayerData", "total_coins_earned", DataManager.total_coins_earned)
 	config.set_value("PlayerData", "total_gems_earned", DataManager.total_gems_earned)
+	if not DataManager.rarest_pet_ever_owned.is_empty():
+		config.set_value("PlayerData", "rarest_pet_name", DataManager.rarest_pet_ever_owned.base_name)
+		config.set_value("PlayerData", "rarest_pet_type", DataManager.rarest_pet_ever_owned.type.name)
 
 func _load_player_stats(config: ConfigFile):
 	DataManager.coins = config.get_value("PlayerData", "coins", 0.0)
@@ -150,6 +155,15 @@ func _load_player_stats(config: ConfigFile):
 	DataManager.eggs_hatched = config.get_value("PlayerData", "eggs_hatched", 0)
 	DataManager.total_coins_earned = config.get_value("PlayerData", "total_coins_earned", 0.0)
 	DataManager.total_gems_earned = config.get_value("PlayerData", "total_gems_earned", 0)
+	var rarest_name = config.get_value("PlayerData", "rarest_pet_name", "")
+	var rarest_type_name = config.get_value("PlayerData", "rarest_pet_type", "")
+	if not rarest_name.is_empty() and not rarest_type_name.is_empty():
+		var type_info_array = DataManager.PET_TYPES.filter(func(t): return t.name == rarest_type_name)
+		if not type_info_array.is_empty():
+			DataManager.rarest_pet_ever_owned = {
+				"base_name": rarest_name,
+				"type": type_info_array.front()
+				}
 
 func _save_player_inventory(config: ConfigFile):
 	# Sauvegarde l'inventaire sous forme d'un seul tableau de dictionnaires.
@@ -193,13 +207,23 @@ func _load_player_team(config: ConfigFile):
 	DataManager.equipped_pets.assign(loaded_team)
 
 func _save_player_index(config: ConfigFile):
-	config.set_value("Index", "discovered_pets", DataManager.discovered_pets.keys())
+	config.set_value("Index", "discovered_pets", DataManager.discovered_pets)
 
 func _load_player_index(config: ConfigFile):
-	DataManager.discovered_pets.clear()
-	var discovered_array = config.get_value("Index", "discovered_pets", [])
-	for pet_name in discovered_array:
-		DataManager.discovered_pets[pet_name] = true
+	# Charge la donnée brute depuis le fichier.
+	var loaded_data = config.get_value("Index", "discovered_pets", {})
+	
+	# --- GESTION DE LA COMPATIBILITÉ ---
+	# Si la donnée chargée est un Array (ancien format), on l'ignore et on repart avec un dictionnaire vide.
+	if typeof(loaded_data) == TYPE_ARRAY:
+		print("Ancien format de sauvegarde pour 'discovered_pets' détecté. Réinitialisation de l'index.")
+		DataManager.discovered_pets = {}
+	# Si c'est bien un dictionnaire (nouveau format), on l'assigne.
+	elif typeof(loaded_data) == TYPE_DICTIONARY:
+		DataManager.discovered_pets = loaded_data
+	else:
+		# Sécurité supplémentaire au cas où la donnée est corrompue.
+		DataManager.discovered_pets = {}
 
 func _save_player_upgrades(config: ConfigFile):
 	config.set_value("Upgrades", "levels", DataManager.upgrade_levels)
@@ -219,3 +243,10 @@ func _save_index_status(config: ConfigFile):
 
 func _load_index_status(config: ConfigFile):
 	DataManager.egg_index_status = config.get_value("Index", "status", {})
+
+func _save_discovered_types(config: ConfigFile):
+	config.set_value("Index", "discovered_types", DataManager.discovered_pet_types)
+
+func _load_discovered_types(config: ConfigFile):
+	var loaded_types = config.get_value("Index", "discovered_types", ["Classic"])
+	DataManager.discovered_pet_types.assign(loaded_types)

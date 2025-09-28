@@ -237,9 +237,17 @@ func set_subviewport_rendering(parent_node: Node, is_enabled: bool):
 # 🔹 Affiche ou cache la notification sur le bouton de l'Index.
 func _update_index_button_notification():
 	var has_rewards_to_claim = false
-	for status in DataManager.egg_index_status.values():
-		if status == "ready_to_claim":
-			has_rewards_to_claim = true
+	
+	# On doit itérer sur les dictionnaires de statut de chaque œuf.
+	for egg_status_dict in DataManager.egg_index_status.values():
+		# Et ensuite sur les statuts réels à l'intérieur.
+		if typeof(egg_status_dict) == TYPE_DICTIONARY:
+			for status_string in egg_status_dict.values():
+				if status_string == "ready_to_claim":
+					has_rewards_to_claim = true
+					break
+			
+		if has_rewards_to_claim:
 			break
 			
 	index_notification_badge.visible = has_rewards_to_claim
