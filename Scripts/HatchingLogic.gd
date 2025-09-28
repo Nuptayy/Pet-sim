@@ -11,7 +11,7 @@ const RED_CROSS_TEXTURE = preload("res://Assets/UI/red_cross.png")
 # --- Paramètres de Jeu ---
 @export var base_hatch_max: int = 12
 @export var global_egg_scale_multiplier: float = 0.5
-@export var low_tier_rarities: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
+@export var low_tier_rarities: Array[String] = ["Common", "Uncommon", "Rare", "Epic"]
 
 # --- État Interne ---
 var NumberOfEggMax: int = 0  # Valeur calculée au démarrage par Main.gd

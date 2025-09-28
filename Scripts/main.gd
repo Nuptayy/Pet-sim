@@ -13,6 +13,7 @@ extends Node
 # Références aux labels du HUD
 @onready var coins_label: Label = %HatchingScreen.find_child("CoinsLabel", true)
 @onready var gems_label: Label = %HatchingScreen.find_child("GemsLabel", true)
+@onready var index_notification_badge = %HatchingScreen.find_child("NotificationBadge", true)
 
 
 # --- Fonctions du Cycle de Vie Godot ---
@@ -52,6 +53,7 @@ func _ready():
 	options_menu.graphic_settings_changed.connect(apply_quality_setting)
 	DataManager.gems_updated.connect(_update_hud_gems)
 	DataManager.upgrades_changed.connect(_on_upgrades_changed)
+	DataManager.index_status_changed.connect(_update_index_button_notification)
 	
 	# --- Bloc 3: Configuration Finale de l'UI et État de Départ ---
 	hatching_screen.get_node("%IndexButton").pressed.connect(index_screen.show)
@@ -60,6 +62,7 @@ func _ready():
 	# Initialise le HUD
 	_update_hud_coins()
 	_update_hud_gems(DataManager.gems)
+	_update_index_button_notification()
 	
 	# Applique les paramètres graphiques
 	apply_quality_setting(SaveManager.load_setting("display/quality_index", 2))
@@ -230,3 +233,13 @@ func set_subviewport_rendering(parent_node: Node, is_enabled: bool):
 	for vp in viewports:
 		if vp is SubViewport:
 			vp.set_update_mode(update_mode)
+
+# 🔹 Affiche ou cache la notification sur le bouton de l'Index.
+func _update_index_button_notification():
+	var has_rewards_to_claim = false
+	for status in DataManager.egg_index_status.values():
+		if status == "ready_to_claim":
+			has_rewards_to_claim = true
+			break
+			
+	index_notification_badge.visible = has_rewards_to_claim

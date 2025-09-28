@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3 uid="uid://cg5xfsfwrj5ae"]
+
+[ext_resource type="Script" uid="uid://d3mvghwoi2ybw" path="res://Scripts/IndexRewardPanel.gd" id="1_0sqty"]
+
+[node name="IndexRewardPanel" type="VBoxContainer"]
+offset_right = 268.0
+offset_bottom = 58.0
+script = ExtResource("1_0sqty")
+
+[node name="RewardLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Récompense: 250 Gems"
+
+[node name="ClaimButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Réclamer"

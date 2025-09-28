@@ -378,31 +378,40 @@ func recalculate_stats_from_upgrades():
 
 # 🔹 Calcule le multiplicateur total de chance (pets équipés + bonus permanent).
 func get_total_luck_boost() -> float:
-	var total_multiplier = 1.0
+	var base_luck = 1.0
+	var total_pet_bonus = 0.0
+	
 	for pet_id in equipped_pets:
 		var pet_instance = get_pet_by_id(pet_id)
 		if not pet_instance.is_empty():
-			total_multiplier *= pet_instance.stats.LuckBoost
-	return total_multiplier * permanent_luck_boost
+			total_pet_bonus += (pet_instance.stats.LuckBoost - 1.0)
+	
+	# On applique le bonus permanent à la fin
+	return (base_luck + total_pet_bonus) * permanent_luck_boost
 
 # 🔹 Calcule le multiplicateur total de vitesse d'éclosion.
 func get_total_speed_boost() -> float:
-	var total_multiplier = 1.0
+	var base_speed = 1.0
+	var total_bonus = 0.0
+	
 	for pet_id in equipped_pets:
 		var pet_instance = get_pet_by_id(pet_id)
 		if not pet_instance.is_empty():
-			total_multiplier *= pet_instance.stats.SpeedBoost
-	return total_multiplier
+			total_bonus += (pet_instance.stats.SpeedBoost - 1.0)
+			
+	return base_speed + total_bonus
 
 # 🔹 Calcule le gain total de pièces par seconde.
 func get_coins_per_second() -> float:
 	var base_rate = 1.0
-	var total_multiplier = 1.0
+	var total_bonus = 0.0
+	
 	for pet_id in equipped_pets:
 		var pet_instance = get_pet_by_id(pet_id)
 		if not pet_instance.is_empty():
-			total_multiplier *= pet_instance.stats.CoinBoost
-	return base_rate * total_multiplier
+			total_bonus += (pet_instance.stats.CoinBoost - 1.0)
+			
+	return base_rate + total_bonus
 
 # 🔹 Calcule le taux de génération de gemmes attendu par seconde (pour affichage).
 func get_gems_per_second_chance() -> float:

@@ -25,9 +25,6 @@ script = ExtResource("1_kln2b")
 [node name="HatchingLogic" type="Node" parent="." groups=["hatching_logic"]]
 unique_name_in_owner = true
 script = ExtResource("2_pbw6q")
-base_hatch_max = null
-global_egg_scale_multiplier = null
-low_tier_rarities = null
 
 [node name="UILayer" type="CanvasLayer" parent="."]
 
