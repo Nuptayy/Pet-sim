@@ -5,6 +5,7 @@ extends PanelContainer
 signal hatch_requested(egg_name, count)
 signal select_requested(egg_name)
 signal auto_delete_requested(egg_name)
+signal offline_target_requested(egg_name)
 
 # --- Références aux Nœuds ---
 @onready var preview_viewport_container: SubViewportContainer = %EggPreview
@@ -47,6 +48,11 @@ func setup(egg_definition: Dictionary, number_of_egg_max: int):
 	%AutoHatchButton.pressed.connect(func(): hatch_requested.emit(egg_name, -1)) # -1 pour Auto-Hatch
 	%AutoDeleteButton.pressed.connect(func(): auto_delete_requested.emit(egg_name))
 	%SelectButton.pressed.connect(func(): select_requested.emit(egg_name))
+	%OfflineTargetButton.pressed.connect(func(): offline_target_requested.emit(egg_name))
+	
+	# Affiche le bouton uniquement si l'amélioration est débloquée.
+	var offline_rewards_unlocked = DataManager.upgrade_levels.get("offline_rewards", 0) > 0
+	%OfflineTargetButton.visible = offline_rewards_unlocked
 	
 # 🔹 Met à jour l'apparence du bouton "Select" pour indiquer s'il est actif.
 func set_selected(is_selected: bool):
@@ -56,6 +62,10 @@ func set_selected(is_selected: bool):
 	else:
 		%SelectButton.text = "Select"
 		%SelectButton.disabled = false
+
+# 🔹 Met à jour l'état visuel du bouton de cible hors ligne.
+func set_as_offline_target(is_target: bool):
+	%OfflineTargetButton.button_pressed = is_target
 
 
 # --- Méthodes Internes ---

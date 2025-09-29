@@ -1,0 +1,159 @@
+[gd_scene load_steps=5 format=3 uid="uid://ch0ctkc3lfu03"]
+
+[ext_resource type="Script" uid="uid://cfdv8fou8keh6" path="res://Scripts/InventoryScreen.gd" id="1_qpyh4"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kmrk1"]
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="FontVariation" id="FontVariation_qpyh4"]
+variation_embolden = 1.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_73rkh"]
+font = SubResource("FontVariation_qpyh4")
+
+[node name="InventoryScreen" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_kmrk1")
+script = ExtResource("1_qpyh4")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Icon" type="TextureRect" parent="MarginContainer/VBoxContainer/Header"]
+layout_mode = 2
+
+[node name="StorageLabel" type="Label" parent="MarginContainer/VBoxContainer/Header"]
+layout_mode = 2
+text = "Storage"
+
+[node name="PetCountLabel" type="Label" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "/99999"
+
+[node name="MainContent" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailsPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/MainContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel"]
+layout_mode = 2
+
+[node name="PetPreviewViewport" type="SubViewportContainer" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SubViewport" type="SubViewport" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer/PetPreviewViewport"]
+own_world_3d = true
+handle_input_locally = false
+render_target_update_mode = 4
+
+[node name="PetPreviewScene" type="Node3D" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer/PetPreviewViewport/SubViewport"]
+
+[node name="Camera3D" type="Camera3D" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer/PetPreviewViewport/SubViewport/PetPreviewScene"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+cull_mask = 4
+projection = 1
+size = 4.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer/PetPreviewViewport/SubViewport/PetPreviewScene"]
+layers = 4
+
+[node name="PetHolder" type="Node3D" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer/PetPreviewViewport/SubViewport/PetPreviewScene"]
+unique_name_in_owner = true
+
+[node name="PetNameLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 1
+label_settings = SubResource("LabelSettings_73rkh")
+
+[node name="RarityLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 1
+
+[node name="ChanceLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 1
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="CoinBoostLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 1
+
+[node name="LuckBoostLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 1
+
+[node name="SpeedBoostLabel" type="Label" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 1
+
+[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="FuseButton" type="Button" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Fuse: 0/10"
+
+[node name="EquipButton" type="Button" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Equip"
+
+[node name="DeleteButton" type="Button" parent="MarginContainer/VBoxContainer/MainContent/DetailsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Delete"
+
+[node name="PetGridScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer/MainContent"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PetGridContainer" type="Control" parent="MarginContainer/VBoxContainer/MainContent/PetGridScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+text = "X"

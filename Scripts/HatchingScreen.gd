@@ -36,7 +36,10 @@ func setup(hatching_logic_node: Node):
 		panel.hatch_requested.connect(_on_panel_hatch_requested)
 		panel.select_requested.connect(_on_egg_selected)
 		panel.auto_delete_requested.connect(auto_delete_menu.open_for_egg)
-
+		panel.offline_target_requested.connect(_on_offline_target_requested)
+	
+	_update_all_offline_targets()
+	
 	# Sélectionne le premier œuf de la liste par défaut.
 	if not egg_panels.is_empty():
 		_on_egg_selected(egg_panels[0].egg_name)
@@ -57,3 +60,14 @@ func _on_egg_selected(egg_name: String):
 	selected_egg_name = egg_name
 	for panel in egg_panels:
 		panel.set_selected(panel.egg_name == selected_egg_name)
+
+# 🔹 Gère la définition d'une nouvelle cible pour l'éclosion hors ligne.
+func _on_offline_target_requested(egg_name: String):
+	DataManager.set_offline_hatch_target(egg_name)
+	_update_all_offline_targets()
+
+# 🔹 Met à jour l'état visuel de tous les boutons de cible hors ligne.
+func _update_all_offline_targets():
+	var current_target = DataManager.offline_hatch_target
+	for panel in egg_panels:
+		panel.set_as_offline_target(panel.egg_name == current_target)

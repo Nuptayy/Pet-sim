@@ -66,7 +66,7 @@ const EGG_DEFINITIONS = [
 			{"name": "Test3",  "chance": 0.0001}
 		],
 		"secret_pets": ["Test3"],
-		"rewards": { # <-- "reward" devient "rewards"
+		"rewards": {
 			"Classic": {"type": "gems", "value": 250},
 			"Golden":  {"type": "gems", "value": 1000},
 			"Rainbow": {"type": "permanent_luck", "value": 0.01},
@@ -95,13 +95,31 @@ const GEM_UPGRADES = {
 		"increase_per_level": 1
 	},
 	"permanent_luck": {
-		"name": "Permanent Luck", "description": "Augmente votre chance permanente de 10%.",
+		"name": "Permanent Luck",
+		"description": "Augmente votre chance permanente de 10%.",
 		"cost_formula": "polynomial",
 		"base_cost": 250,
 		"cost_exponent": 1.4,
 		"cost_multiplier": 5,
 		"max_level": -1,
 		"increase_per_level": 0.1
+	},
+	"offline_rewards": {
+		"name": "Auto-Hatch Hors Ligne",
+		"description": "Permet de continuer à éclore des œufs et à gagner des monnaies lorsque le jeu est fermé.",
+		"cost_formula": "static",
+		"base_cost": 5000,
+		"max_level": 1,
+		"increase_per_level": 0
+	},
+	"offline_time_limit": {
+		"name": "Temps Hors Ligne Max",
+		"description": "Augmente la durée maximale des récompenses hors ligne de 12 heures.",
+		"cost_formula": "exponential",
+		"base_cost": 1000,
+		"cost_increase_factor": 3.0,
+		"max_level": 12, # 12*12h + 24h de base = 1 semaine max
+		"increase_per_level": 12
 	}
 }
 
@@ -134,7 +152,16 @@ var egg_index_status: Dictionary = {}
 
 # --- Améliorations Permanentes ---
 var permanent_luck_boost: float = 1.0 # Valeur de base, modifiée par les améliorations
-var upgrade_levels: Dictionary = { "team_slots": 0, "hatch_max": 0, "permanent_luck": 0 }
+var upgrade_levels: Dictionary = {
+	"team_slots": 0,
+	"hatch_max": 0,
+	"permanent_luck": 0,
+	"offline_rewards": 0,
+	"offline_time_limit": 0
+}
+
+# --- Progression Hors Ligne ---
+var offline_hatch_target: String = ""
 
 
 # ==============================================================================
@@ -345,6 +372,8 @@ func get_upgrade_cost(upgrade_id: String) -> int:
 			cost = int(upgrade_def.base_cost * pow(upgrade_def.cost_increase_factor, current_level))
 		"polynomial":
 			cost = upgrade_def.base_cost + int(pow(current_level, upgrade_def.cost_exponent) * upgrade_def.cost_multiplier)
+		"static":
+			cost = upgrade_def.base_cost
 
 	return cost
 
@@ -371,7 +400,16 @@ func purchase_upgrade(upgrade_id: String) -> bool:
 	# Applique la transaction et met à jour les stats.
 	gems -= cost
 	upgrade_levels[upgrade_id] += 1
-	recalculate_stats_from_upgrades() # Recalcule les stats internes au DataManager.
+	match upgrade_id:
+		"team_slots", "permanent_luck":
+			recalculate_stats_from_upgrades()
+		"hatch_max":
+			var hatching_logic = get_tree().get_first_node_in_group("hatching_logic")
+			if hatching_logic:
+				hatching_logic.NumberOfEggMax += GEM_UPGRADES.hatch_max.increase_per_level
+		"offline_time_limit",  "offline_rewards":
+			# Pas d'action immédiate nécessaire, la valeur est lue au besoin.
+			pass
 	
 	gems_updated.emit(gems)
 	upgrades_changed.emit()
@@ -486,26 +524,17 @@ func get_combined_chance(pet_instance: Dictionary) -> float:
 
 # 🔹 Récupère tous les types de pets uniques que le joueur a déjà possédés.
 func get_discovered_types() -> Array:
-	var discovered_types: Array = []
-	
-	for pet_instance in player_inventory:
-		var type_name = pet_instance.type.name
-		if not type_name in discovered_types:
-			discovered_types.append(type_name)
-			
-	# Assure que le type "Classic" est toujours présent, même si l'inventaire est vide.
-	if not "Classic" in discovered_types:
-		discovered_types.insert(0, "Classic")
-		
+	var types_to_display = discovered_pet_types.duplicate()
+
 	# Trie la liste selon l'ordre défini dans PET_TYPES pour un affichage cohérent.
-	discovered_types.sort_custom(
+	types_to_display.sort_custom(
 		func(a, b):
 			var order_a = PET_TYPES.filter(func(t): return t.name == a).front().order
 			var order_b = PET_TYPES.filter(func(t): return t.name == b).front().order
 			return order_a < order_b
 	)
 	
-	return discovered_types
+	return types_to_display
 
 
 # --- Gestion de la Progression et de l'Index ---
@@ -645,7 +674,176 @@ func claim_index_reward(egg_name: String, type_name: String):
 
 
 # ==============================================================================
-# 4. FONCTIONS DE DÉBOGAGE
+# 4. LOGIQUE HORS LIGNE
+# ==============================================================================
+
+const OFFLINE_EFFICIENCY = 0.5
+const OFFLINE_LOW_TIER_RARITIES = ["Common", "Uncommon", "Rare", "Epic"]
+
+# 🔹 Définit l'œuf cible pour l'éclosion hors ligne.
+func set_offline_hatch_target(egg_name: String):
+	if offline_hatch_target != egg_name:
+		offline_hatch_target = egg_name
+		print("Nouvel œuf cible pour l'éclosion hors ligne: ", egg_name)
+		SaveManager.save_game_data()
+
+# 🔹 Calcule le temps maximum de récompense hors ligne en secondes.
+func get_max_offline_duration_seconds() -> int:
+	var base_hours = 24
+	var bonus_hours = 0
+	var time_limit_level = upgrade_levels.get("offline_time_limit", 0)
+	if time_limit_level > 0:
+		bonus_hours = GEM_UPGRADES.offline_time_limit.increase_per_level * time_limit_level
+	return (base_hours + bonus_hours) * 3600
+
+# 🔹 Simule la progression hors ligne et retourne un résumé des gains.
+func simulate_offline_progress(duration_seconds: int) -> Dictionary:
+	print("--- SIMULATION (Nouvelle Logique) --- Début pour %d secondes." % duration_seconds)
+
+	if offline_hatch_target.is_empty(): return {}
+	var egg_def = EGG_DEFINITIONS.filter(func(e): return e.name == offline_hatch_target).front()
+	if not egg_def: return {}
+
+	# --- 1. Calcul des gains potentiels ---
+	var coins_per_second_offline = get_coins_per_second() * OFFLINE_EFFICIENCY
+	var total_earned_coins = coins_per_second_offline * duration_seconds
+
+	var earned_gems = int(get_gems_per_second_chance() / 100.0 * duration_seconds * OFFLINE_EFFICIENCY)
+	
+	print("--- SIMULATION --- Gain total potentiel de pièces : %d" % total_earned_coins)
+
+	# --- 2. Division des gains et simulation de l'éclosion ---
+	var coins_for_hatching = total_earned_coins / 2.0
+	var coins_to_keep = total_earned_coins - coins_for_hatching
+
+	var eggs_hatched_count = 0
+	var coins_spent = 0.0
+	
+	if coins_for_hatching >= egg_def.cost:
+		eggs_hatched_count = floori(coins_for_hatching / egg_def.cost)
+		coins_spent = eggs_hatched_count * egg_def.cost
+	
+	# Les pièces non dépensées dans la simulation sont aussi rendues au joueur.
+	var leftover_coins_from_hatching = coins_for_hatching - coins_spent
+	var net_coin_gain = coins_to_keep + leftover_coins_from_hatching
+	
+	print("--- SIMULATION --- Pièces pour éclosion: %d | Œufs calculés: %d | Gain net final: %d" % [coins_for_hatching, eggs_hatched_count, net_coin_gain])
+
+	# --- 3. Simulation des tirages ---
+	var hatched_pets: Array[Dictionary] = []
+	if eggs_hatched_count > 0:
+		var lucky_pets_table = _offline_get_pets_with_luck(offline_hatch_target)
+		var filters = auto_delete_filters.get(offline_hatch_target, {})
+		
+		for i in range(eggs_hatched_count):
+			var pet_data = _offline_roll_one_pet(lucky_pets_table)
+			var pet_def_sim = PET_DEFINITIONS[pet_data.base_name]
+			if not (filters.has(pet_def_sim.rarity) and pet_data.type.name in filters[pet_def_sim.rarity]):
+				hatched_pets.append(pet_data)
+
+	# --- 4. Préparation des résultats ---
+	hatched_pets.sort_custom(func(a, b): return get_combined_chance(a) < get_combined_chance(b))
+	
+	return {
+		"net_coin_gain": net_coin_gain,
+		"earned_gems": earned_gems,
+		"eggs_hatched": eggs_hatched_count,
+		"pets_kept": hatched_pets,
+		"best_pets_for_display": hatched_pets.slice(0, 4)
+	}
+
+# 🔹 Applique les gains calculés hors ligne à l'état actuel du joueur.
+func apply_offline_gains(results: Dictionary):
+	coins += results.net_coin_gain
+	gems += results.earned_gems
+	total_coins_earned += max(0, results.net_coin_gain)
+	total_gems_earned += results.earned_gems
+	eggs_hatched += results.eggs_hatched
+	
+	for pet_data in results.pets_kept:
+		var source_egg_name = ""
+		for egg_def in EGG_DEFINITIONS:
+			if egg_def.pets.any(func(p): return p.name == pet_data.base_name):
+				source_egg_name = egg_def.name
+				break
+		if not source_egg_name.is_empty():
+			discover_pet(pet_data.base_name, source_egg_name, pet_data.type)
+		add_pet_to_inventory(pet_data.base_name, pet_data.type)
+ 
+	if results.earned_gems > 0:
+		gems_updated.emit(gems)
+
+# 🔹 Génère une table de butin temporaire (version autonome).
+func _offline_get_pets_with_luck(egg_name: String) -> Array:
+	var source_pets = []
+	var egg_def = EGG_DEFINITIONS.filter(func(e): return e.name == egg_name).front()
+	if not egg_def: return []
+	
+	for pet_info_in_egg in egg_def.pets:
+		var pet_def = PET_DEFINITIONS[pet_info_in_egg.name]
+		var full_pet_def = pet_def.duplicate(true)
+		full_pet_def.name = pet_info_in_egg.name
+		full_pet_def.chance = pet_info_in_egg.chance
+		source_pets.append(full_pet_def)
+		
+	var pets_copy = source_pets.duplicate(true)
+	var low_tiers = pets_copy.filter(func(p): return p.rarity in OFFLINE_LOW_TIER_RARITIES)
+	var high_tiers = pets_copy.filter(func(p): return not p.rarity in OFFLINE_LOW_TIER_RARITIES)
+	
+	var total_chance_boost = 0.0
+	for pet in high_tiers:
+		var boost = (pet.chance * get_total_luck_boost()) - pet.chance
+		total_chance_boost += boost
+		pet.chance += boost
+ 
+	var low_tier_chance_pool = low_tiers.reduce(func(sum, p): return sum + p.chance, 0.0)
+	if low_tier_chance_pool > 0.001:
+		for pet in low_tiers:
+			var proportion_of_pool = pet.chance / low_tier_chance_pool
+			pet.chance = max(0.01, pet.chance - (total_chance_boost * proportion_of_pool))
+ 
+	var final_pets = low_tiers + high_tiers
+	var current_total = final_pets.reduce(func(sum, p): return sum + p.chance, 0.0)
+	if current_total > 0:
+		for pet in final_pets: pet.chance *= (100.0 / current_total)
+	else:
+		return source_pets
+ 
+	return final_pets
+
+# 🔹 Tire UN pet et son type (version autonome).
+func _offline_roll_one_pet(pets_to_roll: Array) -> Dictionary:
+	var roll = rng.randf_range(0.0, 100.0)
+	var cumulative = 0.0
+	
+	for pet_data in pets_to_roll:
+		cumulative += pet_data.chance
+		if roll <= cumulative:
+			var final_pet_data = pet_data.duplicate()
+			final_pet_data.base_name = pet_data.name
+			final_pet_data.type = _offline_roll_pet_type()
+			return final_pet_data
+ 
+	var fallback_pet = pets_to_roll[0].duplicate()
+	fallback_pet.base_name = pets_to_roll[0].name
+	fallback_pet.type = PET_TYPES.back()
+	return fallback_pet
+
+# 🔹 Tire un type de pet (version autonome).
+func _offline_roll_pet_type() -> Dictionary:
+	var roll = rng.randf_range(0.0, 100.0)
+	var cumulative = 0.0
+	
+	for type_data in PET_TYPES:
+		cumulative += type_data.chance
+		if roll <= cumulative:
+			return type_data
+ 
+	return PET_TYPES[0]
+
+
+# ==============================================================================
+# 5. FONCTIONS DE DÉBOGAGE
 # ==============================================================================
 
 # 🔹 [DEBUG] Ajoute un montant de pièces.

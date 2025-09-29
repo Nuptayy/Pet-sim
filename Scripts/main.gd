@@ -123,6 +123,7 @@ func _input(event: InputEvent):
 # 🔹 Gère les notifications du système d'exploitation, comme la fermeture de la fenêtre.
 func _notification(what: int):
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		get_tree().set_meta("offline_rewards_calculated", false)
 		SaveManager.save_all()
 		get_tree().quit()
 
@@ -165,6 +166,7 @@ func toggle_pause():
 # 🔹 Gère le retour au menu principal depuis le menu pause.
 func on_return_to_main_menu():
 	get_tree().paused = false
+	get_tree().set_meta("offline_rewards_calculated", false)
 	SaveManager.save_all()
 	get_tree().change_scene_to_file("res://Scenes/Main_menu.tscn")
 

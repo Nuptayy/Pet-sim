@@ -98,6 +98,7 @@ func update_setting(key: String, value):
 # 🔹 Sauvegarde toutes les données de progression du joueur.
 func save_game_data():
 	var config = ConfigFile.new()
+	config.set_value("Session", "last_timestamp", Time.get_unix_time_from_system())
 	
 	_save_player_stats(config)
 	_save_player_inventory(config)
@@ -107,6 +108,7 @@ func save_game_data():
 	_save_auto_delete_filters(config)
 	_save_index_status(config)
 	_save_discovered_types(config)
+	_save_player_stats(config)
 	
 	DirAccess.make_dir_recursive_absolute("user://saves")
 	config.save(GAME_DATA_PATH)
@@ -144,6 +146,7 @@ func _save_player_stats(config: ConfigFile):
 	config.set_value("PlayerData", "eggs_hatched", DataManager.eggs_hatched)
 	config.set_value("PlayerData", "total_coins_earned", DataManager.total_coins_earned)
 	config.set_value("PlayerData", "total_gems_earned", DataManager.total_gems_earned)
+	config.set_value("PlayerData", "offline_hatch_target", DataManager.offline_hatch_target)
 	if not DataManager.rarest_pet_ever_owned.is_empty():
 		config.set_value("PlayerData", "rarest_pet_name", DataManager.rarest_pet_ever_owned.base_name)
 		config.set_value("PlayerData", "rarest_pet_type", DataManager.rarest_pet_ever_owned.type.name)
@@ -155,6 +158,7 @@ func _load_player_stats(config: ConfigFile):
 	DataManager.eggs_hatched = config.get_value("PlayerData", "eggs_hatched", 0)
 	DataManager.total_coins_earned = config.get_value("PlayerData", "total_coins_earned", 0.0)
 	DataManager.total_gems_earned = config.get_value("PlayerData", "total_gems_earned", 0)
+	DataManager.offline_hatch_target = config.get_value("PlayerData", "offline_hatch_target", "")
 	var rarest_name = config.get_value("PlayerData", "rarest_pet_name", "")
 	var rarest_type_name = config.get_value("PlayerData", "rarest_pet_type", "")
 	if not rarest_name.is_empty() and not rarest_type_name.is_empty():
@@ -229,8 +233,26 @@ func _save_player_upgrades(config: ConfigFile):
 	config.set_value("Upgrades", "levels", DataManager.upgrade_levels)
 
 func _load_player_upgrades(config: ConfigFile):
-	var default_levels = { "team_slots": 0, "hatch_max": 0, "permanent_luck": 0 }
-	DataManager.upgrade_levels = config.get_value("Upgrades", "levels", default_levels)
+	# 1. Définit la structure complète avec toutes les clés possibles et leurs valeurs par défaut.
+	var default_levels = {
+		"team_slots": 0,
+		"hatch_max": 0,
+		"permanent_luck": 0,
+		"offline_rewards": 0,
+		"offline_time_limit": 0
+	}
+	
+	# 2. Charge les niveaux depuis la sauvegarde (peut être un dictionnaire incomplet).
+	var loaded_levels = config.get_value("Upgrades", "levels", {})
+	
+	# 3. Fusionne les deux.
+	# On part des valeurs par défaut, et on écrase avec les valeurs chargées si elles existent.
+	for key in loaded_levels:
+		if default_levels.has(key):
+			default_levels[key] = loaded_levels[key]
+			
+	# 4. Assigne le dictionnaire complet et à jour à DataManager.
+	DataManager.upgrade_levels = default_levels
 
 func _save_auto_delete_filters(config: ConfigFile):
 	config.set_value("AutoDelete", "filters", DataManager.auto_delete_filters)
@@ -250,3 +272,14 @@ func _save_discovered_types(config: ConfigFile):
 func _load_discovered_types(config: ConfigFile):
 	var loaded_types = config.get_value("Index", "discovered_types", ["Classic"])
 	DataManager.discovered_pet_types.assign(loaded_types)
+
+func load_session_timestamp() -> int:
+	var config = ConfigFile.new()
+	
+	if not FileAccess.file_exists(GAME_DATA_PATH):
+		return 0
+		
+	if config.load(GAME_DATA_PATH) != OK:
+		return 0
+	
+	return config.get_value("Session", "last_timestamp", 0)

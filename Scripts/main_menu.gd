@@ -25,7 +25,8 @@ func _ready():
 
 # 🔹 Lance la scène de jeu principale.
 func _on_play_game_pressed():
-	get_tree().change_scene_to_file("res://Scenes/Main.tscn")
+	SaveManager.load_game_data()
+	get_tree().change_scene_to_file("res://Scenes/LoadingScreen.tscn")
 
 # 🔹 Affiche le sous-menu des options et cache les boutons principaux.
 func _on_options_pressed():

@@ -59,3 +59,10 @@ text = "Auto Delete"
 unique_name_in_owner = true
 layout_mode = 2
 text = "Select"
+
+[node name="OfflineTargetButton" type="Button" parent="MarginContainer/HBoxContainer/ButtonContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+toggle_mode = true
+text = "🌙 Set Offline"
