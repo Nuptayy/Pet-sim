@@ -677,7 +677,7 @@ func claim_index_reward(egg_name: String, type_name: String):
 # 4. LOGIQUE HORS LIGNE
 # ==============================================================================
 
-const OFFLINE_EFFICIENCY = 0.5
+const OFFLINE_EFFICIENCY = 0.25
 const OFFLINE_LOW_TIER_RARITIES = ["Common", "Uncommon", "Rare", "Epic"]
 
 # 🔹 Définit l'œuf cible pour l'éclosion hors ligne.

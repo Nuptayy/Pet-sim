@@ -55,8 +55,7 @@ func _show_results_screen(results: Dictionary):
 	var screen = OFFLINE_REWARDS_SCREEN.instantiate()
 	add_child(screen)
 	screen.setup(results)
-	# Le "await screen.rewards_claimed" est crucial, il met en pause le chargement
-	# jusqu'à ce que le joueur clique sur "Réclamer".
+	# Le "await screen.rewards_claimed" est crucial, il met en pause le chargement jusqu'à ce que le joueur clique sur "Réclamer".
 	await screen.rewards_claimed
 	_proceed_to_game()
 
