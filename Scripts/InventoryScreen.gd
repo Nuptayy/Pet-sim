@@ -24,10 +24,13 @@ const MAX_PETS = 1000 # Exemple, à synchroniser avec les données réelles si n
 @onready var equip_button: Button = %EquipButton
 @onready var fuse_button: Button = %FuseButton
 @onready var fuse_all_button: Button = %FuseAllButton
+@onready var sort_by_button: Button = %SortByButton
 
 # --- État ---
 var _grouped_inventory: Array[Dictionary] = []
 var _selected_group_key: String = ""
+var _sort_options = ["Rarity", "CoinBoost", "LuckBoost", "Count"]
+var _current_sort_index = 0
 
 
 # --- Fonctions du Cycle de Vie Godot ---
@@ -41,6 +44,7 @@ func _ready():
 	%FuseButton.pressed.connect(_on_fuse_pressed)
 	%FuseAllButton.pressed.connect(_on_fuse_all_pressed)
 	%DeleteButton.pressed.connect(_on_delete_pressed)
+	%SortByButton.pressed.connect(_on_sort_by_pressed)
 	
 	DataManager.inventory_updated.connect(redraw_inventory)
 	DataManager.total_pet_count_changed.connect(_update_total_count)
@@ -64,6 +68,7 @@ func redraw_inventory():
 	var previously_selected_key = _selected_group_key
 	
 	_group_inventory()
+	_sort_grouped_inventory()
 	
 	for child in pet_grid.get_children():
 		child.queue_free()
@@ -151,6 +156,12 @@ func _on_visibility_changed():
 	if not visible:
 		_hide_details_panel()
 
+# 🔹 Change le critère de tri en passant au suivant dans la liste.
+func _on_sort_by_pressed():
+	_current_sort_index = (_current_sort_index +1) % _sort_options.size()
+	redraw_inventory()
+
+
 # --- Méthodes Internes de Mise à Jour de l'UI ---
 
 # 🔹 Met à jour les labels du panneau de détails.
@@ -225,6 +236,7 @@ func _group_inventory():
 			temp_groups[key] = {
 				"key": key,
 				"data": pet_instance,
+				"rarity_order": DataManager.RARITIES[DataManager.PET_DEFINITIONS[pet_instance.base_name].rarity].order,
 				"count": 0,
 				"first_id": pet_instance.unique_id
 			}
@@ -298,3 +310,25 @@ func _find_mesh_recursively(node: Node) -> MeshInstance3D:
 		var mesh = _find_mesh_recursively(child)
 		if mesh: return mesh
 	return null
+
+# 🔹 Trie la liste _grouped_inventory selon le critère actuel.
+func _sort_grouped_inventory():
+	var sort_by = _sort_options[_current_sort_index]
+	sort_by_button.text = "Trier par : %s" % sort_by.capitalize()
+	
+	_grouped_inventory.sort_custom(
+		func(a, b):
+			match sort_by:
+				"Rarity":
+					var chance_a = DataManager.get_combined_chance(a.data)
+					var chance_b = DataManager.get_combined_chance(b.data)
+					return chance_a < chance_b
+				"CoinBoost":
+					return a.data.stats.CoinBoost > b.data.stats.CoinBoost
+				"LuckBoost":
+					return a.data.stats.LuckBoost > b.data.stats.LuckBoost
+				"Count":
+					return a.count > b.count
+			
+			return false
+	)
