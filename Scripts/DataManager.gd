@@ -722,6 +722,8 @@ func _check_for_index_completion(egg_name: String, type_name_to_check: String):
 			break
 			
 	if all_pets_for_type_discovered:
+		if not egg_index_status.has(egg_name) or typeof(egg_index_status[egg_name]) != TYPE_DICTIONARY:
+			egg_index_status[egg_name] = {}
 		print("Index pour '%s' (%s) complété ! Prêt à être réclamé." % [egg_name, type_name_to_check])
 		egg_index_status[egg_name][type_name_to_check] = "ready_to_claim"
 		index_status_changed.emit()
