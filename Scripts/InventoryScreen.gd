@@ -6,6 +6,7 @@ signal close_requested
 
 # --- Constantes et Paramètres ---
 const PET_SLOT_SCENE = preload("res://Scenes/PetSlot.tscn")
+const TEAM_SLOT_SCENE = preload("res://Scenes/TeamSlot.tscn")
 const CONFIRMATION_DIALOG_SCENE = preload("res://Scenes/ConfirmationDialog.tscn")
 const RENDER_LAYER_PREVIEW = 3
 const MAX_PETS = 1000 # Exemple, à synchroniser avec les données réelles si nécessaire
@@ -25,6 +26,7 @@ const MAX_PETS = 1000 # Exemple, à synchroniser avec les données réelles si n
 @onready var fuse_button: Button = %FuseButton
 @onready var fuse_all_button: Button = %FuseAllButton
 @onready var sort_by_button: Button = %SortByButton
+@onready var team_bar_container: HBoxContainer = %TeamBarContainer
 
 # --- État ---
 var _grouped_inventory: Array[Dictionary] = []
@@ -87,6 +89,7 @@ func redraw_inventory():
 		display_pet_details(previously_selected_key)
 	else:
 		_hide_details_panel()
+	_redraw_team_bar()
 
 # 🔹 Affiche les détails pour un groupe de pets sélectionné.
 func display_pet_details(group_key: String):
@@ -161,6 +164,10 @@ func _on_sort_by_pressed():
 	_current_sort_index = (_current_sort_index +1) % _sort_options.size()
 	redraw_inventory()
 
+# 🔹 Gère une demande de déséquipement depuis un slot de la barre d'équipe.
+func _on_unequip_requested(pet_id: int):
+	DataManager.unequip_pet(pet_id)
+
 
 # --- Méthodes Internes de Mise à Jour de l'UI ---
 
@@ -222,6 +229,27 @@ func _update_details_model(pet_group: Dictionary):
 func _hide_details_panel():
 	details_panel.visible = false
 	_selected_group_key = ""
+	equip_button.text = "Equip"
+	equip_button.disabled = true
+	fuse_button.visible = false
+
+# 🔹 Redessine la barre d'équipe en haut de l'inventaire.
+func _redraw_team_bar():
+	for child in team_bar_container.get_children():
+		child.queue_free()
+	
+	for i in range(DataManager.max_equipped_pets):
+		var slot = TEAM_SLOT_SCENE.instantiate()
+		team_bar_container.add_child(slot)
+
+		if i < DataManager.equipped_pets.size():
+			var pet_id = DataManager.equipped_pets[i]
+			var pet_instance = DataManager.get_pet_by_id(pet_id)
+			slot.setup(pet_instance)
+			slot.unequip_requested.connect(_on_unequip_requested)
+		else:
+			slot.setup(null)
+
 
 # --- Fonctions de Groupement et Utilitaires ---
 
@@ -231,6 +259,9 @@ func _group_inventory():
 	var temp_groups = {}
 	
 	for pet_instance in DataManager.player_inventory:
+		if pet_instance.unique_id in DataManager.equipped_pets:
+			continue
+
 		var key = "%s_%s" % [pet_instance.base_name, pet_instance.type.name]
 		if not temp_groups.has(key):
 			temp_groups[key] = {
