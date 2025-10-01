@@ -39,6 +39,18 @@ func setup(pet_instance: Dictionary):
 	# Met à jour la bordure visuelle si le pet est équipé.
 	_update_equipped_style(pet_instance.unique_id)
 
+# 🔹 Configure le slot pour un groupe de pets (inventaire).
+func setup_grouped(pet_group: Dictionary):
+	var pet_instance = pet_group.data
+	# Appelle la fonction setup originale pour le modèle 3D et le style.
+	setup(pet_instance) 
+	
+	# Met à jour le compteur.
+	if pet_group.count > 1:
+		%CountLabel.text = "x%d" % pet_group.count
+		%CountLabel.visible = true
+	else:
+		%CountLabel.visible = false
 
 # --- Méthodes Internes ---
 
