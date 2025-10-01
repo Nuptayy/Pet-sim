@@ -1,3 +1,5 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+.vscode/launch.json
+.github/copilot-instructions.md

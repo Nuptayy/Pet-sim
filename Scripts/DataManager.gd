@@ -357,6 +357,74 @@ func fuse_pets(base_pet_id: int):
 
 	print("Fusion réussie ! Création de 1x %s %s" % [next_type_info.name, pet_species])
 
+# 🔹 Effectue toutes les fusions possibles dans l'inventaire en une seule opération.
+func fuse_all_pets():
+	print("--- DÉBUT DE FUSE ALL ---")
+	var fusions_were_made = true
+	
+	# On boucle tant que des fusions sont possibles.
+	while fusions_were_made:
+		fusions_were_made = false
+		
+		# 1. Grouper l'inventaire actuel.
+		var temp_groups = {}
+		for pet_instance in player_inventory:
+			var key = "%s_%s" % [pet_instance.base_name, pet_instance.type.name]
+			if not temp_groups.has(key):
+				temp_groups[key] = { "data": pet_instance, "count": 0, "instances": [] }
+			temp_groups[key].count += 1
+			temp_groups[key].instances.append(pet_instance)
+
+		# 2. Parcourir les groupes et effectuer les fusions.
+		for group_key in temp_groups:
+			var group = temp_groups[group_key]
+			var required_amount = 10
+			
+			if group.count >= required_amount:
+				# Détermine le type suivant
+				var current_type_order = group.data.type.order
+				var next_type_info = null
+				for pet_type in PET_TYPES:
+					if pet_type.order == current_type_order + 1:
+						next_type_info = pet_type
+						break
+				
+				# S'il y a bien un type suivant, on peut fusionner.
+				if next_type_info:
+					fusions_were_made = true # On signale qu'on a travaillé, pour potentiellement refaire une boucle.
+					
+					var num_fusions = floori(group.count / required_amount)
+					var pets_to_consume_count = num_fusions * required_amount
+					
+					print("Fusion de %d x '%s'..." % [pets_to_consume_count, group_key])
+					
+					# Supprime les pets consommés.
+					var consumed_count = 0
+					var instances_to_remove = group.instances
+					# On priorise les non-équipés
+					instances_to_remove.sort_custom(func(a,b): return (a.unique_id in equipped_pets) > (b.unique_id in equipped_pets))
+					
+					for i in range(pets_to_consume_count):
+						remove_pet_by_id(instances_to_remove[i].unique_id)
+					
+					# Ajoute les nouveaux pets fusionnés.
+					var pet_species = group.data.base_name
+					for i in range(num_fusions):
+						add_pet_to_inventory(pet_species, next_type_info)
+						# On découvre le nouveau pet
+						var source_egg_name = "" # On doit retrouver son oeuf d'origine
+						for egg_def in EGG_DEFINITIONS:
+							if egg_def.pets.any(func(p): return p.name == pet_species):
+								source_egg_name = egg_def.name
+								break
+						if not source_egg_name.is_empty():
+							discover_pet(pet_species, source_egg_name, next_type_info)
+
+	# 3. Une fois toutes les fusions terminées, on émet un seul signal pour tout mettre à jour.
+	print("--- FIN DE FUSE ALL ---")
+	inventory_updated.emit()
+
+
 # --- Gestion des Améliorations (Gem Shop) ---
 
 # 🔹 Calcule le coût du prochain niveau pour une amélioration donnée.
