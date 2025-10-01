@@ -359,70 +359,93 @@ func fuse_pets(base_pet_id: int):
 
 # 🔹 Effectue toutes les fusions possibles dans l'inventaire en une seule opération.
 func fuse_all_pets():
-	print("--- DÉBUT DE FUSE ALL ---")
-	var fusions_were_made = true
-	
-	# On boucle tant que des fusions sont possibles.
-	while fusions_were_made:
-		fusions_were_made = false
+	print("--- DÉBUT DE FUSE ALL (Optimisé) ---")
+	if player_inventory.is_empty():
+		print("Inventaire vide, aucune fusion possible.")
+		return
 		
-		# 1. Grouper l'inventaire actuel.
-		var temp_groups = {}
-		for pet_instance in player_inventory:
-			var key = "%s_%s" % [pet_instance.base_name, pet_instance.type.name]
-			if not temp_groups.has(key):
-				temp_groups[key] = { "data": pet_instance, "count": 0, "instances": [] }
-			temp_groups[key].count += 1
-			temp_groups[key].instances.append(pet_instance)
+	# 1. Grouper l'inventaire UNE SEULE FOIS.
+	var pet_groups = {}
+	for pet_instance in player_inventory:
+		var key = "%s_%s" % [pet_instance.base_name, pet_instance.type.name]
+		if not pet_groups.has(key):
+			pet_groups[key] = { "data": pet_instance, "count": 0 }
+		pet_groups[key].count += 1
 
-		# 2. Parcourir les groupes et effectuer les fusions.
-		for group_key in temp_groups:
-			var group = temp_groups[group_key]
-			var required_amount = 10
+	# 2. Créer une nouvelle liste d'inventaire vide.
+	var new_inventory: Array[Dictionary] = []
+	var new_id_counter = 0
+
+	# 3. Parcourir les groupes et calculer le résultat final de chaque fusion en chaîne.
+	for group_key in pet_groups:
+		var group = pet_groups[group_key]
+		var current_count = group.count
+		var current_type_order = group.data.type.order
+		var pet_species = group.data.base_name
+		
+		# Boucle pour les fusions en chaîne (Classic -> Golden -> Rainbow...)
+		while current_count >= 10:
+			var next_type_info = null
+			for pet_type in PET_TYPES:
+				if pet_type.order == current_type_order + 1:
+					next_type_info = pet_type
+					break
 			
-			if group.count >= required_amount:
-				# Détermine le type suivant
-				var current_type_order = group.data.type.order
-				var next_type_info = null
-				for pet_type in PET_TYPES:
-					if pet_type.order == current_type_order + 1:
-						next_type_info = pet_type
-						break
-				
-				# S'il y a bien un type suivant, on peut fusionner.
-				if next_type_info:
-					fusions_were_made = true # On signale qu'on a travaillé, pour potentiellement refaire une boucle.
-					
-					var num_fusions = floori(group.count / required_amount)
-					var pets_to_consume_count = num_fusions * required_amount
-					
-					print("Fusion de %d x '%s'..." % [pets_to_consume_count, group_key])
-					
-					# Supprime les pets consommés.
-					var consumed_count = 0
-					var instances_to_remove = group.instances
-					# On priorise les non-équipés
-					instances_to_remove.sort_custom(func(a,b): return (a.unique_id in equipped_pets) > (b.unique_id in equipped_pets))
-					
-					for i in range(pets_to_consume_count):
-						remove_pet_by_id(instances_to_remove[i].unique_id)
-					
-					# Ajoute les nouveaux pets fusionnés.
-					var pet_species = group.data.base_name
-					for i in range(num_fusions):
-						add_pet_to_inventory(pet_species, next_type_info)
-						# On découvre le nouveau pet
-						var source_egg_name = "" # On doit retrouver son oeuf d'origine
-						for egg_def in EGG_DEFINITIONS:
-							if egg_def.pets.any(func(p): return p.name == pet_species):
-								source_egg_name = egg_def.name
-								break
-						if not source_egg_name.is_empty():
-							discover_pet(pet_species, source_egg_name, next_type_info)
+			if not next_type_info:
+				break # Type maximum atteint, on arrête de fusionner ce groupe.
+			
+			var num_fusions = floori(current_count / 10.0)
+			var pets_remaining = current_count % 10
+			
+			# On ajoute les pets fusionnés au groupe de type supérieur.
+			var next_group_key = "%s_%s" % [pet_species, next_type_info.name]
+			if not pet_groups.has(next_group_key):
+				pet_groups[next_group_key] = { "data": {"base_name": pet_species, "type": next_type_info}, "count": 0 }
+			pet_groups[next_group_key].count += num_fusions
+			
+			# On met à jour le groupe actuel avec ce qui reste.
+			current_count = pets_remaining
+			current_type_order += 1 # On passe au type suivant pour la prochaine itération.
 
-	# 3. Une fois toutes les fusions terminées, on émet un seul signal pour tout mettre à jour.
-	print("--- FIN DE FUSE ALL ---")
+		# Après toutes les fusions en chaîne, on ajoute les pets restants à la nouvelle liste.
+		if current_count > 0:
+			var final_type_info = null
+			for pet_type in PET_TYPES:
+				if pet_type.order == current_type_order:
+					final_type_info = pet_type
+					break
+			
+			for i in range(current_count):
+				var new_pet_instance = {
+					"unique_id": new_id_counter,
+					"base_name": pet_species,
+					"type": final_type_info,
+					"stats": calculate_final_stats(pet_species, final_type_info)
+				}
+				new_inventory.append(new_pet_instance)
+				new_id_counter += 1
+
+	# 4. Remplacer l'ancien inventaire par le nouveau et mettre à jour les dépendances.
+	player_inventory = new_inventory
+	next_pet_unique_id = new_id_counter
+	
+	# Il faut vérifier si les pets équipés existent toujours.
+	var valid_equipped_pets: Array[int] = []
+	for pet_id in equipped_pets:
+		var found = false
+		for pet_instance in player_inventory:
+			if pet_instance.unique_id == pet_id:
+				found = true
+				break
+		if found:
+			valid_equipped_pets.append(pet_id)
+	equipped_pets = valid_equipped_pets
+	
+	print("--- FIN DE FUSE ALL --- Inventaire reconstruit.")
+	
+	# Émettre tous les signaux nécessaires pour mettre à jour l'UI.
 	inventory_updated.emit()
+	equipped_pets_changed.emit()
 
 
 # --- Gestion des Améliorations (Gem Shop) ---
