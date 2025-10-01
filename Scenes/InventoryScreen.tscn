@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://ch0ctkc3lfu03"]
+[gd_scene load_steps=6 format=3 uid="uid://ch0ctkc3lfu03"]
 
 [ext_resource type="Script" uid="uid://cfdv8fou8keh6" path="res://Scripts/InventoryScreen.gd" id="1_qpyh4"]
 
@@ -13,6 +13,13 @@ variation_embolden = 1.0
 
 [sub_resource type="LabelSettings" id="LabelSettings_73rkh"]
 font = SubResource("FontVariation_qpyh4")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qpyh4"]
+bg_color = Color(0.34117648, 0.34117648, 0.34117648, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [node name="InventoryScreen" type="PanelContainer"]
 anchors_preset = 15
@@ -52,6 +59,11 @@ text = "/99999"
 unique_name_in_owner = true
 layout_mode = 2
 text = "Fuse All"
+
+[node name="SortByButton" type="Button" parent="MarginContainer/VBoxContainer/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Trier par: Rarity"
 
 [node name="MainContent" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -156,8 +168,13 @@ unique_name_in_owner = true
 layout_mode = 2
 columns = 10
 
-[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer"]
+[node name="CloseButton" type="Button" parent="MarginContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
 layout_mode = 2
+size_flags_horizontal = 8
 size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_qpyh4")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_qpyh4")
+theme_override_styles/hover = SubResource("StyleBoxFlat_qpyh4")
 text = "X"
