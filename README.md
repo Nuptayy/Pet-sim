@@ -1,4 +1,4 @@
-Work in progress (WIP)
+Work in progress (WIP) *doesn't currently have a official name*
 
 This game involves opening eggs to obtain pets. Each pet gives you a bonus if it is equipped to open better eggs and obtain more bonuses.
 
