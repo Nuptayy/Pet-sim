@@ -13,7 +13,8 @@ const MAX_PETS = 1000 # Exemple, à synchroniser avec les données réelles si n
 
 # --- Références aux Nœuds ---
 @onready var details_panel: PanelContainer = %DetailsPanel
-@onready var pet_grid: GridContainer = %PetGrid
+@onready var pet_grid: FlowContainer = %PetGrid
+@onready var team_bar_container: HBoxContainer = %TeamBarContainer
 @onready var pet_holder: Node3D = %PetHolder
 @onready var pet_count_label: Label = %PetCountLabel
 @onready var pet_name_label: Label = %PetNameLabel
@@ -24,9 +25,7 @@ const MAX_PETS = 1000 # Exemple, à synchroniser avec les données réelles si n
 @onready var speed_boost_label: Label = %SpeedBoostLabel
 @onready var equip_button: Button = %EquipButton
 @onready var fuse_button: Button = %FuseButton
-@onready var fuse_all_button: Button = %FuseAllButton
 @onready var sort_by_button: Button = %SortByButton
-@onready var team_bar_container: HBoxContainer = %TeamBarContainer
 
 # --- État ---
 var _grouped_inventory: Array[Dictionary] = []
@@ -44,8 +43,8 @@ func _ready():
 	%CloseButton.pressed.connect(func(): close_requested.emit())
 	%EquipButton.pressed.connect(_on_equip_pressed)
 	%FuseButton.pressed.connect(_on_fuse_pressed)
-	%FuseAllButton.pressed.connect(_on_fuse_all_pressed)
 	%DeleteButton.pressed.connect(_on_delete_pressed)
+	%FuseAllButton.pressed.connect(_on_fuse_all_pressed)
 	%SortByButton.pressed.connect(_on_sort_by_pressed)
 	
 	DataManager.inventory_updated.connect(redraw_inventory)
@@ -85,17 +84,17 @@ func redraw_inventory():
 		slot.setup_grouped(pet_group)
 		slot.pressed.connect(display_pet_details.bind(pet_group.key))
 	
+	_redraw_team_bar()
+	
 	if selected_group_still_exists:
 		display_pet_details(previously_selected_key)
 	else:
 		_hide_details_panel()
-	_redraw_team_bar()
 
 # 🔹 Affiche les détails pour un groupe de pets sélectionné.
 func display_pet_details(group_key: String):
 	_selected_group_key = group_key
 	var pet_group = _get_group_from_key(group_key)
-	
 	if pet_group.is_empty():
 		_hide_details_panel()
 		return
@@ -109,7 +108,6 @@ func display_pet_details(group_key: String):
 # 🔹 Gère l'action du bouton "Equip"/"Unequip".
 func _on_equip_pressed():
 	if _selected_group_key.is_empty(): return
-	
 	var pet_group = _get_group_from_key(_selected_group_key)
 	if pet_group.is_empty(): return
 	
@@ -117,28 +115,23 @@ func _on_equip_pressed():
 	var pet_type_name = pet_group.data.type.name
 	
 	var equipped_instance = _find_equipped_instance_in_group(pet_species, pet_type_name)
-	
 	if equipped_instance:
 		DataManager.unequip_pet(equipped_instance.unique_id)
 	else:
 		var instance_to_equip = _find_unequipped_instance_in_group(pet_species, pet_type_name)
 		if instance_to_equip:
 			DataManager.equip_pet(instance_to_equip.unique_id)
-	
-	# Rafraîchit l'état du bouton et potentiellement les styles des slots.
-	redraw_inventory()
 
 # 🔹 Gère l'action du bouton "Fuse".
 func _on_fuse_pressed():
 	if _selected_group_key.is_empty(): return
 	var pet_group = _get_group_from_key(_selected_group_key)
 	if pet_group.is_empty(): return
-	
 	DataManager.fuse_pets(pet_group.first_id)
 
 # 🔹 Gère le clic sur le bouton "Fuse All".
 func _on_fuse_all_pressed():
-	fuse_all_button.disabled = true
+	%FuseAllButton.disabled = true
 	DataManager.fuse_all_pets()
 
 # 🔹 Gère l'action du bouton "Delete".
@@ -161,7 +154,7 @@ func _on_visibility_changed():
 
 # 🔹 Change le critère de tri en passant au suivant dans la liste.
 func _on_sort_by_pressed():
-	_current_sort_index = (_current_sort_index +1) % _sort_options.size()
+	_current_sort_index = (_current_sort_index + 1) % _sort_options.size()
 	redraw_inventory()
 
 # 🔹 Gère une demande de déséquipement depuis un slot de la barre d'équipe.
@@ -170,6 +163,23 @@ func _on_unequip_requested(pet_id: int):
 
 
 # --- Méthodes Internes de Mise à Jour de l'UI ---
+
+# 🔹 Redessine la barre d'équipe en haut de l'inventaire.
+func _redraw_team_bar():
+	for child in team_bar_container.get_children():
+		child.queue_free()
+	
+	for i in range(DataManager.max_equipped_pets):
+		var slot = TEAM_SLOT_SCENE.instantiate()
+		team_bar_container.add_child(slot)
+
+		if i < DataManager.equipped_pets.size():
+			var pet_id = DataManager.equipped_pets[i]
+			var pet_instance = DataManager.get_pet_by_id(pet_id)
+			slot.setup(pet_instance)
+			slot.unequip_requested.connect(_on_unequip_requested)
+		else:
+			slot.setup(null)
 
 # 🔹 Met à jour les labels du panneau de détails.
 func _update_details_panel(pet_group: Dictionary):
@@ -232,23 +242,6 @@ func _hide_details_panel():
 	equip_button.text = "Equip"
 	equip_button.disabled = true
 	fuse_button.visible = false
-
-# 🔹 Redessine la barre d'équipe en haut de l'inventaire.
-func _redraw_team_bar():
-	for child in team_bar_container.get_children():
-		child.queue_free()
-	
-	for i in range(DataManager.max_equipped_pets):
-		var slot = TEAM_SLOT_SCENE.instantiate()
-		team_bar_container.add_child(slot)
-
-		if i < DataManager.equipped_pets.size():
-			var pet_id = DataManager.equipped_pets[i]
-			var pet_instance = DataManager.get_pet_by_id(pet_id)
-			slot.setup(pet_instance)
-			slot.unequip_requested.connect(_on_unequip_requested)
-		else:
-			slot.setup(null)
 
 
 # --- Fonctions de Groupement et Utilitaires ---
@@ -360,6 +353,5 @@ func _sort_grouped_inventory():
 					return a.data.stats.LuckBoost > b.data.stats.LuckBoost
 				"Count":
 					return a.count > b.count
-			
 			return false
 	)
