@@ -22,5 +22,3 @@ I am the only one working on it.
 
 ### Contributing
 I would love your help! Contribute by forking the repo and opening pull requests.
-
-Motivation
