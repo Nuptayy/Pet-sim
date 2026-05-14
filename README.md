@@ -10,7 +10,7 @@ This game involves opening eggs to obtain pets. Each pet gives you a bonus if it
 
 This is an adaptation of all the “simulator” games available on Roblox.
 
-This is a personal project that will **not** be marketed.
+This is a personal project that will **not** be marketed.\
 I am the only one working on it.
 
 ### Usage :
@@ -18,7 +18,7 @@ I am the only one working on it.
 "E" to open 1 egg.\
 "R" to open max egg.\
 "T" to auto open max egg.\
-"F" to open inventory.\
+"F" to open inventory.
 
 ### Contributing
 I would love your help! Contribute by forking the repo and opening pull requests.
