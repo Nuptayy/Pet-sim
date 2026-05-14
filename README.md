@@ -15,10 +15,10 @@ I am the only one working on it.
 
 ### Usage :
 
-"E" to open 1 egg.
-"R" to open max egg.
-"T" to auto open max egg.
-"F" to open inventory.
+"E" to open 1 egg.\
+"R" to open max egg.\
+"T" to auto open max egg.\
+"F" to open inventory.\
 
 ### Contributing
 I would love your help! Contribute by forking the repo and opening pull requests.
