@@ -1,7 +1,7 @@
 # Work in progress (WIP)
 ## *does currently not have a official name*
 
-## quick start
+## Quick Start
 when it will be released, you'll just have to download the .exe and start it 
 
 ### What is it ?
