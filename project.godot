@@ -12,18 +12,23 @@ config_version=5
 
 general/quality/use_taa=false
 
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
 [application]
 
 config/name="egg openning simulator"
 run/main_scene="uid://73kfiebexev1"
-config/features=PackedStringArray("4.5", "Forward Plus")
+config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
-config/main_scene="uid://dwe0kh83cw0a"
 
 [autoload]
 
+GameConfig="*res://Scripts/GameConfig.gd"
 DataManager="*res://Scripts/DataManager.gd"
 SaveManager="*res://Scripts/SaveManager.gd"
+Backend="*res://Scripts/Backend.gd"
 
 [display]
 
@@ -32,6 +37,14 @@ window/size/viewport_height=1080
 window/size/mode=2
 window/stretch/mode="viewport"
 window/vsync/vsync_mode=0
+
+[dotnet]
+
+project/assembly_name="egg openning simulator"
+
+[editor_plugins]
+
+enabled=PackedStringArray()
 
 [input]
 
@@ -71,3 +84,6 @@ toggle_debug_menu={
 3d_render/layer_1="World"
 3d_render/layer_2="EggPreview"
 3d_render/layer_3="PetPreview"
+
+[plugins]
+

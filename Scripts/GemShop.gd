@@ -1,40 +1,46 @@
 # GemShop.gd
 extends PanelContainer
 
+# --- Constantes ---
 const UPGRADE_PANEL_SCENE = preload("res://Scenes/UpgradePanel.tscn")
 
-# 🔹 Initialise le magasin en connectant les signaux et en construisant la liste.
+# --- État ---
+var _upgrade_panels: Array = []
+
+
+# --- Fonctions du Cycle de Vie Godot ---
+
+# 🔹 Construit la liste des améliorations et connecte les signaux.
 func _ready():
 	%CloseButton.pressed.connect(hide)
-	
-	# Met à jour l'affichage à chaque changement pour rester synchronisé.
-	visibility_changed.connect(_on_visibility_changed)
-	DataManager.gems_updated.connect(_update_display)
-	
-# 🔹 Met à jour l'affichage complet du magasin lorsqu'il devient visible.
-func _on_visibility_changed():
-	if visible:
-		_update_display()
-		
-# 🔹 Rafraîchit le nombre de gems et la liste des améliorations.
-func _update_display():
-	%GemsLabel.text = "Gems: %d" % DataManager.gems
-	
-	# Nettoie l'ancienne liste.
-	for child in %UpgradeList.get_children():
-		child.queue_free()
-		
-	# Reconstruit la liste à partir des données de DataManager.
-	for upgrade_id in DataManager.GEM_UPGRADES:
+	for upgrade_id in GameConfig.GEM_UPGRADES:
 		var panel = UPGRADE_PANEL_SCENE.instantiate()
 		%UpgradeList.add_child(panel)
 		panel.setup(upgrade_id)
 		panel.purchase_requested.connect(_on_purchase_requested)
+		_upgrade_panels.append(panel)
+	visibility_changed.connect(_refresh_display)
+	DataManager.gems_updated.connect(_on_gems_updated)
+	DataManager.upgrades_changed.connect(_refresh_display)
 
-# 🔹 Gère une demande d'achat en appelant DataManager.
+
+# --- Fonctions de Rappel (Signal Callbacks) ---
+
+# 🔹 Rafraîchit le magasin quand le nombre de gems change.
+func _on_gems_updated(_new_gem_count: int):
+	_refresh_display()
+
+# 🔹 Demande l'achat d'une amélioration au backend.
 func _on_purchase_requested(upgrade_id: String):
-	var success = DataManager.purchase_upgrade(upgrade_id)
-	if success:
-		# Si l'achat réussit, on met à jour l'affichage pour refléter
-		# les nouveaux coûts et niveaux.
-		_update_display()
+	await Backend.buy_upgrade(upgrade_id)
+
+
+# --- Méthodes Internes ---
+
+# 🔹 Met à jour le nombre de gems et l'état de chaque amélioration, si le magasin est visible.
+func _refresh_display():
+	if not is_visible_in_tree():
+		return
+	%GemsLabel.text = "Gems: %d" % DataManager.gems
+	for panel in _upgrade_panels:
+		panel.refresh()

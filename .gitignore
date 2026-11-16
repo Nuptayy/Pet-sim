@@ -1,4 +1,16 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+*.tmp
+
+# Builds exportés (à publier via les Releases GitHub, pas dans le dépôt)
+/Export/
+
+# Réglages d'export (peuvent contenir un keystore ou une clé de chiffrement)
+export_presets.cfg
+
+# Plugins éditeur locaux (non versionnés)
+/addons/
+
+# Éditeurs / outils
 .vscode/launch.json

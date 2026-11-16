@@ -23,8 +23,6 @@ func _ready():
 func setup(r_name: String, all_types: Array, current_type_filters: Array):
 	self.rarity_name = r_name
 	%RarityCheckbox.text = r_name
-	
-	# Crée dynamiquement une case à cocher pour chaque type de pet.
 	var type_container = %TypeContainer
 	for type_info in all_types:
 		var type_name = type_info.name
@@ -34,7 +32,6 @@ func setup(r_name: String, all_types: Array, current_type_filters: Array):
 		checkbox.toggled.connect(_on_any_child_checkbox_changed)
 		type_container.add_child(checkbox)
 		type_checkboxes[type_name] = checkbox
-	
 	_update_main_checkbox_state()
 
 # 🔹 Retourne la liste des noms de types actuellement sélectionnés dans ce groupe.
@@ -51,18 +48,15 @@ func get_selected_types() -> Array[String]:
 # 🔹 Gère le clic sur la case à cocher principale (la rareté), cochant/décochant tous les types.
 func _on_rarity_checkbox_toggled(is_on: bool):
 	if _is_updating: return
-	
 	_is_updating = true
 	for checkbox in type_checkboxes.values():
 		checkbox.button_pressed = is_on
 	_is_updating = false
-	
 	filter_changed.emit()
 
 # 🔹 Gère le clic sur n'importe quelle case de type, mettant à jour l'état de la case principale.
 func _on_any_child_checkbox_changed(_is_on: bool):
 	if _is_updating: return
-	
 	_update_main_checkbox_state()
 	filter_changed.emit()
 
@@ -73,26 +67,17 @@ func _on_any_child_checkbox_changed(_is_on: bool):
 func _update_main_checkbox_state():
 	if _is_updating: return
 	_is_updating = true
-	
 	var all_checked = true
 	var none_checked = true
-	
 	for checkbox in type_checkboxes.values():
 		if checkbox.button_pressed:
 			none_checked = false
 		else:
 			all_checked = false
-	
-	# Si toutes les cases sont cochées, la principale est cochée.
-	# Si aucune n'est cochée, la principale est décochée.
-	# Sinon, elle est dans un état intermédiaire.
 	if all_checked:
 		%RarityCheckbox.button_pressed = true
 	elif none_checked:
 		%RarityCheckbox.button_pressed = false
 	else:
-		# L'état indéterminé n'est pas supporté par CheckBox, donc on la décoche
-		# pour montrer que "tout" n'est pas sélectionné.
 		%RarityCheckbox.button_pressed = false
-
 	_is_updating = false

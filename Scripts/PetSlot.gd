@@ -2,97 +2,109 @@
 extends Button
 
 # --- Constantes ---
+const PetIconCache = preload("res://Scripts/PetIconCache.gd")
 const EQUIPPED_STYLE = preload("res://style/equipped_style.tres")
-const RENDER_LAYER_PREVIEW = 3 # Couche de rendu pour les previews de l'UI
 
 # --- Références aux Nœuds ---
-# On accède directement à la scène de preview grâce à son nom unique.
-@onready var preview_scene: Node3D = %PetPreview3D
+@onready var icon_rect: TextureRect = %PetIcon
 
 
 # --- Méthodes Publiques ---
 
-# 🔹 Configure l'apparence du slot (modèle 3D, effet, bordure d'équipement) pour un pet donné.
+# 🔹 Configure le slot avec la vignette et l'infobulle d'un pet.
 func setup(pet_instance: Dictionary):
-	# Pas besoin d'attendre ici, les @onready garantissent que les nœuds sont disponibles.
-	
-	# Configure l'infobulle.
-	self.tooltip_text = "%s (%s)" % [pet_instance.base_name, pet_instance.type.name]
-	
-	# Récupère le conteneur du modèle 3D à l'intérieur de la scène de preview.
-	var object_holder: Node3D = preview_scene.get_node("ObjectHolder")
-	
-	# Nettoie l'ancien modèle.
-	for child in object_holder.get_children():
-		child.queue_free()
-	
-	# Instancie et configure le nouveau modèle.
-	var pet_base_name = pet_instance.base_name
-	if DataManager.PET_DEFINITIONS.has(pet_base_name):
-		var pet_def = DataManager.PET_DEFINITIONS[pet_base_name]
-		var model = pet_def.model.instantiate()
-		object_holder.add_child(model)
-		
-		_apply_slot_effect(model, pet_instance.type)
-		_set_model_render_layer(model, RENDER_LAYER_PREVIEW)
-	
-	# Met à jour la bordure visuelle si le pet est équipé.
-	_update_equipped_style(pet_instance.unique_id)
+	tooltip_text = "%s (%s)" % [pet_instance.base_name, pet_instance.type.name]
+	icon_rect.texture = PetIconCache.get_icon(pet_instance.base_name, pet_instance.type)
+	_update_equipped_style(pet_instance.get("unique_id", -1))
 
-# 🔹 Configure le slot pour un groupe de pets (inventaire).
+# 🔹 Configure le slot pour un groupe de pets identiques, avec son compteur.
 func setup_grouped(pet_group: Dictionary):
-	var pet_instance = pet_group.data
-	# Appelle la fonction setup originale pour le modèle 3D et le style.
-	setup(pet_instance) 
-	
-	# Met à jour le compteur.
-	if pet_group.count > 1:
-		%CountLabel.text = "x%d" % pet_group.count
-		%CountLabel.visible = true
-	else:
-		%CountLabel.visible = false
+	setup(pet_group.data)
+	%CountLabel.text = "x%d" % pet_group.count
+	%CountLabel.visible = pet_group.count > 1
+
+
+# --- Badge "Nouveau" ---
+
+# 🔹 Affiche un petit cercle rouge "!" en haut à droite du slot.
+func show_new_badge():
+	if has_node("NewBadge"):
+		return
+	var badge = Panel.new()
+	badge.name = "NewBadge"
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	badge.offset_left = -26
+	badge.offset_top = 3
+	badge.offset_right = -3
+	badge.offset_bottom = 26
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.95, 0.12, 0.12, 1.0)
+	style.set_corner_radius_all(12)
+	badge.add_theme_stylebox_override("panel", style)
+	var label = Label.new()
+	label.text = "!"
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", Color.WHITE)
+	label.add_theme_font_size_override("font_size", 13)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.add_child(label)
+	add_child(badge)
+
+# 🔹 Retire le badge "Nouveau".
+func hide_new_badge():
+	if has_node("NewBadge"):
+		get_node("NewBadge").queue_free()
+
+
+# --- Marque de Suppression ---
+
+# 🔹 Affiche un voile rouge avec la quantité à supprimer, ou le retire si la quantité est nulle.
+func show_delete_mark(quantity: int):
+	var mark: Panel = get_node_or_null("DeleteMark")
+	if quantity <= 0:
+		if mark != null:
+			mark.visible = false
+		return
+	if mark == null:
+		mark = _create_delete_mark()
+	mark.visible = true
+	mark.get_node("QuantityLabel").text = "-%d" % quantity
+
+# 🔹 Crée le voile rouge de suppression et son étiquette de quantité.
+func _create_delete_mark() -> Panel:
+	var mark = Panel.new()
+	mark.name = "DeleteMark"
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mark.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.85, 0.1, 0.1, 0.45)
+	style.border_color = Color(1.0, 0.2, 0.2, 1.0)
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(6)
+	mark.add_theme_stylebox_override("panel", style)
+	var label = Label.new()
+	label.name = "QuantityLabel"
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", Color.WHITE)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 6)
+	label.add_theme_font_size_override("font_size", 28)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mark.add_child(label)
+	add_child(mark)
+	return mark
+
 
 # --- Méthodes Internes ---
 
-# 🔹 Applique une bordure visuelle au slot si le pet est dans l'équipe.
+# 🔹 Applique le style "équipé" si le pet fait partie de l'équipe.
 func _update_equipped_style(pet_id: int):
-	var is_equipped = pet_id in DataManager.equipped_pets
-	if is_equipped:
+	if pet_id in DataManager.equipped_pets:
 		add_theme_stylebox_override("normal", EQUIPPED_STYLE)
-	else:
-		# Assure-toi que le style est bien retiré s'il n'est pas équipé.
-		if get_theme_stylebox("normal") == EQUIPPED_STYLE:
-			remove_theme_stylebox_override("normal")
-
-# 🔹 Applique un effet visuel (shader) au modèle du pet.
-func _apply_slot_effect(pet_node: Node3D, type_info: Dictionary):
-	var mesh_instance = _find_mesh_recursively(pet_node)
-	if not mesh_instance: return
-	
-	mesh_instance.material_overlay = null # Réinitialise
-	
-	if type_info.effect_type == "shader" and type_info.value is String and type_info.value.begins_with("res://"):
-		var shader = load(type_info.value) as Shader
-		if shader:
-			var shader_material = ShaderMaterial.new()
-			shader_material.shader = shader
-			mesh_instance.material_overlay = shader_material
-
-# 🔹 Applique une couche de rendu à tous les meshes d'un nœud et de ses enfants.
-func _set_model_render_layer(node: Node, layer_number: int):
-	var layer_mask = 1 << (layer_number - 1)
-	
-	if node is MeshInstance3D:
-		node.layers = layer_mask
-	for child in node.get_children():
-		_set_model_render_layer(child, layer_number)
-
-# 🔹 Trouve récursivement le premier nœud MeshInstance3D dans une hiérarchie.
-func _find_mesh_recursively(node: Node) -> MeshInstance3D:
-	if node is MeshInstance3D:
-		return node
-	for child in node.get_children():
-		var mesh = _find_mesh_recursively(child)
-		if mesh:
-			return mesh
-	return null
+	elif has_theme_stylebox_override("normal"):
+		remove_theme_stylebox_override("normal")

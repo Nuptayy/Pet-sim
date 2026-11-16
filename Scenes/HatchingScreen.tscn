@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://bkoqp428qpx3f"]
+[gd_scene format=3 uid="uid://bkoqp428qpx3f"]
 
 [ext_resource type="Script" uid="uid://da75wf6l4na7i" path="res://Scripts/HatchingScreen.gd" id="1_q8fgx"]
 [ext_resource type="PackedScene" uid="uid://v7suj6cuyf2s" path="res://Scenes/AutoDeleteMenu.tscn" id="2_r5ssx"]
@@ -15,7 +15,7 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="HatchingScreen" type="PanelContainer"]
+[node name="HatchingScreen" type="PanelContainer" unique_id=957599510]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -24,71 +24,71 @@ grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dg7qe")
 script = ExtResource("1_q8fgx")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=108217305]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0
 
-[node name="CoinsLabel" type="Label" parent="HBoxContainer"]
+[node name="CoinsLabel" type="Label" parent="HBoxContainer" unique_id=2035581977]
 unique_name_in_owner = true
 layout_mode = 2
-text = "yoi"
+text = "Coins: 0"
 
-[node name="GemsLabel" type="Label" parent="HBoxContainer"]
+[node name="GemsLabel" type="Label" parent="HBoxContainer" unique_id=638153568]
 unique_name_in_owner = true
 layout_mode = 2
-text = "yiioo"
+text = "Gems: 0"
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1275844955]
 layout_mode = 2
 
-[node name="ContentPanel" type="PanelContainer" parent="CenterContainer"]
+[node name="ContentPanel" type="PanelContainer" parent="CenterContainer" unique_id=356542900]
 custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_q8fgx")
 
-[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/ContentPanel"]
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/ContentPanel" unique_id=1385680275]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/ContentPanel/MarginContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/ContentPanel/MarginContainer" unique_id=2035802599]
 custom_minimum_size = Vector2(0, 400)
 layout_mode = 2
 
-[node name="EggList" type="VBoxContainer" parent="CenterContainer/ContentPanel/MarginContainer/ScrollContainer"]
+[node name="EggList" type="VBoxContainer" parent="CenterContainer/ContentPanel/MarginContainer/ScrollContainer" unique_id=1314700314]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="AutoDeleteMenu" parent="CenterContainer" instance=ExtResource("2_r5ssx")]
+[node name="AutoDeleteMenu" parent="CenterContainer" unique_id=524376532 instance=ExtResource("2_r5ssx")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=572632132]
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 8
 
-[node name="GemShopButton" type="Button" parent="VBoxContainer"]
+[node name="GemShopButton" type="Button" parent="VBoxContainer" unique_id=1464842326]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 8
 text = "Shop"
 
-[node name="IndexButton" type="Button" parent="VBoxContainer"]
+[node name="IndexButton" type="Button" parent="VBoxContainer" unique_id=1718095168]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 8
 text = "Index"
 
-[node name="NotificationBadge" type="Label" parent="VBoxContainer/IndexButton"]
+[node name="NotificationBadge" type="Label" parent="VBoxContainer/IndexButton" unique_id=642291455]
 visible = false
 layout_mode = 1
 anchors_preset = 1

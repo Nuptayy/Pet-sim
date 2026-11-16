@@ -1,21 +1,18 @@
-// virus_effect.gdshader
 shader_type spatial;
-render_mode blend_mix;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
 
-float random(vec2 uv) {
-	return fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+float rand(vec2 co) {
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
 void fragment() {
-	vec3 virus_color = vec3(1.0, 0.1, 0.2); // Rouge
-	
-	// L'opacité scintille comme le glitch.
-	float noise_intensity = random(UV + vec2(TIME * 8.0)) * 0.4;
-	
-	// On ajoute un effet de "scanline" qui bouge verticalement.
-	float scanline = step(0.9, sin(UV.y * 20.0 - TIME * 5.0)) * 0.3;
-	
-	ALBEDO = virus_color;
-	// L'opacité finale est la somme du bruit et des scanlines.
-	ALPHA = noise_intensity + scanline;
+    float t = floor(TIME * 8.0);
+    float row = floor(UV.y * 20.0);
+    float band = rand(vec2(t * 0.1, row));
+    float active = step(0.85, band);
+    float r = step(0.7, rand(vec2(t, row + 0.1))) * active;
+    float g = step(0.75, rand(vec2(t + 0.3, row))) * active * 0.5;
+    float b = step(0.6, rand(vec2(t + 0.7, row))) * active;
+    ALBEDO = vec3(0.0, 0.6, 0.5) * 0.2 + vec3(r, g, b) * 0.7;
+    ALPHA = 1.0;
 }

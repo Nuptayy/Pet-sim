@@ -1,70 +1,53 @@
 # TeamSlot.gd
 extends Button
 
-signal unequip_requested(pet_id)
+# --- Signaux ---
+signal slot_clicked(pet_instance)
 
+# --- Constantes ---
+const PetIconCache = preload("res://Scripts/PetIconCache.gd")
 const EQUIPPED_STYLE = preload("res://style/equipped_style.tres")
-const RENDER_LAYER_PREVIEW = 3
 
-@onready var preview_scene: Node3D = %PetPreview3D
+# --- Références aux Nœuds ---
+@onready var icon_rect: TextureRect = %PetIcon
 
+# --- État ---
 var _pet_instance
+
+
+# --- Fonctions du Cycle de Vie Godot ---
+
+# 🔹 Connecte le clic sur le slot.
+func _ready():
+	pressed.connect(_on_pressed)
+
+
+# --- Méthodes Publiques ---
 
 # 🔹 Configure le slot avec les données d'un pet ou le met en état "vide".
 func setup(pet_instance_or_null):
 	_pet_instance = pet_instance_or_null
-	
 	tooltip_text = ""
-	
-	var pet_holder: Node3D = preview_scene.get_node("ObjectHolder")
-	for child in pet_holder.get_children():
-		child.queue_free()
-
-	if _pet_instance is Dictionary:
-		disabled = false
-		tooltip_text = "%s (%s)" % [_pet_instance.base_name, _pet_instance.type.name]
-		add_theme_stylebox_override("normal", EQUIPPED_STYLE)
-		
-		var pet_def = DataManager.PET_DEFINITIONS[_pet_instance.base_name]
-		if pet_def and pet_def.model:
-			var model = pet_def.model.instantiate()
-			pet_holder.add_child(model)
-			_apply_effect(model, _pet_instance.type)
-			_set_model_render_layer(model, RENDER_LAYER_PREVIEW)
-	else:
+	icon_rect.texture = null
+	if not (_pet_instance is Dictionary) or not GameConfig.PET_DEFINITIONS.has(_pet_instance.base_name):
+		_pet_instance = null
 		disabled = true
 		if has_theme_stylebox_override("normal"):
 			remove_theme_stylebox_override("normal")
+		return
+	disabled = false
+	var stats = _pet_instance.stats
+	tooltip_text = "%s (%s)\nCoins x%.1f  Luck x%.2f  Gems %.4f/s" % [
+		_pet_instance.base_name, _pet_instance.type.name,
+		stats.CoinBoost, stats.LuckBoost, stats.GemBoost
+	]
+	add_theme_stylebox_override("normal", EQUIPPED_STYLE)
+	icon_rect.texture = PetIconCache.get_icon(_pet_instance.base_name, _pet_instance.type)
 
-# 🔹 Connecte le signal du bouton.
-func _ready():
-	pressed.connect(_on_pressed)
 
-# 🔹 Gère le clic sur le slot pour demander un déséquipement.
+# --- Fonctions de Rappel (Signal Callbacks) ---
+
+# 🔹 Signale le clic avec le pet contenu dans le slot.
 func _on_pressed():
 	if _pet_instance is Dictionary:
-		unequip_requested.emit(_pet_instance.unique_id)
-
-# --- Fonctions utilitaires (copiées de PetSlot.gd) ---
-func _apply_effect(pet_node: Node3D, type_info: Dictionary):
-	var mesh_instance = _find_mesh_recursively(pet_node)
-	if not mesh_instance: return
-	mesh_instance.material_overlay = null
-	if type_info.effect_type == "shader" and type_info.value is String:
-		var shader = load(type_info.value) as Shader
-		if shader:
-			var shader_material = ShaderMaterial.new()
-			shader_material.shader = shader
-			mesh_instance.material_overlay = shader_material
-
-func _set_model_render_layer(node: Node, layer_number: int):
-	var layer_mask = 1 << (layer_number - 1)
-	if node is MeshInstance3D: node.layers = layer_mask
-	for child in node.get_children(): _set_model_render_layer(child, layer_number)
-
-func _find_mesh_recursively(node: Node) -> MeshInstance3D:
-	if node is MeshInstance3D: return node
-	for child in node.get_children():
-		var mesh = _find_mesh_recursively(child)
-		if mesh: return mesh
-	return null
+		slot_clicked.emit(_pet_instance)

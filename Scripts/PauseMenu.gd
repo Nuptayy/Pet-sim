@@ -15,21 +15,14 @@ signal return_to_main_menu
 
 # 🔹 Initialise le menu, connecte les signaux et s'assure qu'il est invisible au départ.
 func _ready():
-	# Permet au menu de fonctionner même si le jeu est en pause.
 	self.process_mode = Node.PROCESS_MODE_ALWAYS
-	
-	# Cache tous les éléments au démarrage.
 	hide()
 	options_menu.hide()
 	stats_page.hide()
-	
-	# Connexions des boutons du menu principal.
 	%ContinueButton.pressed.connect(_on_continue_pressed)
 	%StatsButton.pressed.connect(func(): _show_submenu(stats_page))
 	%OptionsButton.pressed.connect(func(): _show_submenu(options_menu))
 	%SaveAndExitButton.pressed.connect(_on_return_to_menu_pressed)
-	
-	# Connexions des boutons "Retour" des sous-menus.
 	options_menu.back_pressed.connect(_show_main_buttons)
 	stats_page.back_pressed.connect(_show_main_buttons)
 
@@ -39,7 +32,7 @@ func _ready():
 # 🔹 Gère l'affichage ou le masquage du menu de pause.
 func set_paused(is_paused: bool):
 	if is_paused:
-		_show_main_buttons() # Affiche les boutons principaux du menu pause.
+		_show_main_buttons()
 		show()
 	else:
 		hide()

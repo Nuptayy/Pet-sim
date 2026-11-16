@@ -2,104 +2,126 @@
 extends Node
 
 # --- Constantes ---
+const SAVE_DIR = "user://saves"
 const SETTINGS_PATH = "user://saves/settings.cfg"
 const GAME_DATA_PATH = "user://saves/gamedata.cfg"
+const GAME_DATA_TEMP_PATH = "user://saves/gamedata.cfg.new"
+const GAME_DATA_BACKUP_PATH = "user://saves/gamedata.cfg.bak"
+const GAME_DATA_CORRUPT_PATH = "user://saves/gamedata.corrupt.cfg"
+const DEFERRED_SAVE_DELAY = 5.0
 
-# --- État ---
-# Dictionnaire des paramètres par défaut.
 const DEFAULT_SETTINGS = {
 	"display/resolution": Vector2i(1920, 1080),
 	"display/fullscreen_mode": Window.MODE_WINDOWED,
 	"display/vsync_mode": DisplayServer.VSYNC_ENABLED,
 	"display/fps_limit": 0,
-	"display/quality_index": 2, # 0:Basse, 1:Moyenne, 2:Haute
+	"display/quality_index": 2,
 	"gameplay/confirm_delete": true
 }
 
+# --- État Interne ---
+var _settings: ConfigFile
+var _save_pending: bool = false
+var _deferred_save_timer: Timer
 
-# ==============================================================================
-# 1. ORCHESTRATION GLOBALE
-# ==============================================================================
 
-# 🔹 Charge toutes les données du jeu (options et progression) au démarrage.
+# --- Fonctions du Cycle de Vie Godot ---
+
+# 🔹 Prépare le timer qui regroupe les sauvegardes demandées en rafale.
+func _ready():
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_deferred_save_timer = Timer.new()
+	_deferred_save_timer.wait_time = DEFERRED_SAVE_DELAY
+	_deferred_save_timer.one_shot = true
+	_deferred_save_timer.timeout.connect(_on_deferred_save_timeout)
+	add_child(_deferred_save_timer)
+
+# 🔹 Sauvegarde la partie quand l'application passe en arrière-plan (mobile).
+func _notification(what: int):
+	if what == NOTIFICATION_APPLICATION_PAUSED and DataManager.progression_is_active:
+		save_game_data()
+
+
+# --- Méthodes Publiques Générales ---
+
+# 🔹 Charge les options puis les données de jeu.
 func load_all():
 	load_options()
 	load_game_data()
 
-# 🔹 Sauvegarde toutes les données du jeu (options et progression).
+# 🔹 Sauvegarde les options puis les données de jeu.
 func save_all():
 	save_options()
 	save_game_data()
 
+# 🔹 Demande une sauvegarde de la partie dans les prochaines secondes, sans en empiler plusieurs.
+func request_save():
+	_save_pending = true
+	if _deferred_save_timer.is_stopped():
+		_deferred_save_timer.start()
 
-# ==============================================================================
-# 2. GESTION DES OPTIONS DU JEU
-# ==============================================================================
 
-# 🔹 Charge les paramètres depuis le fichier de configuration et les applique.
+# --- Options ---
+
+# 🔹 Charge les options depuis le disque et les applique au moteur.
 func load_options():
-	var config = ConfigFile.new()
-	var error = config.load(SETTINGS_PATH)
-	
-	if error != OK:
-		print("Fichier de paramètres non trouvé. Utilisation des valeurs par défaut.")
-	
-	get_window().size = config.get_value("display", "resolution", DEFAULT_SETTINGS["display/resolution"])
-	get_window().mode = config.get_value("display", "fullscreen_mode", DEFAULT_SETTINGS["display/fullscreen_mode"])
-	DisplayServer.window_set_vsync_mode(config.get_value("display", "vsync_mode", DEFAULT_SETTINGS["display/vsync_mode"]))
+	var config = _get_settings()
 	Engine.max_fps = config.get_value("display", "fps_limit", DEFAULT_SETTINGS["display/fps_limit"])
-	
-	print("Options chargées.")
+	DisplayServer.window_set_vsync_mode(config.get_value("display", "vsync_mode", DEFAULT_SETTINGS["display/vsync_mode"]))
+	if _is_mobile():
+		return
+	var window_mode = config.get_value("display", "fullscreen_mode", DEFAULT_SETTINGS["display/fullscreen_mode"])
+	var resolution: Vector2i = config.get_value("display", "resolution", DEFAULT_SETTINGS["display/resolution"])
+	var usable_size = DisplayServer.screen_get_usable_rect().size
+	if window_mode == Window.MODE_WINDOWED and (resolution.x > usable_size.x or resolution.y > usable_size.y):
+		get_window().mode = Window.MODE_MAXIMIZED
+		return
+	if window_mode == Window.MODE_WINDOWED:
+		get_window().size = resolution
+	get_window().mode = window_mode
 
-# 🔹 Sauvegarde tous les paramètres actuels dans le fichier de configuration.
+# 🔹 Enregistre l'état actuel des options sur le disque.
 func save_options():
-	var config = ConfigFile.new()
-	
-	config.set_value("display", "resolution", get_window().size)
-	config.set_value("display", "fullscreen_mode", get_window().mode)
+	var config = _get_settings()
 	config.set_value("display", "vsync_mode", DisplayServer.window_get_vsync_mode())
 	config.set_value("display", "fps_limit", Engine.max_fps)
-	config.set_value("display", "quality_index", load_setting("display/quality_index", DEFAULT_SETTINGS["display/quality_index"]))
-	config.set_value("gameplay", "confirm_delete", load_setting("gameplay/confirm_delete", DEFAULT_SETTINGS["gameplay/confirm_delete"]))
-	
-	DirAccess.make_dir_recursive_absolute("user://saves")
-	config.save(SETTINGS_PATH)
-	print("Options sauvegardées.")
+	if not _is_mobile() and get_window().mode == Window.MODE_WINDOWED:
+		config.set_value("display", "resolution", get_window().size)
+	_write_settings()
 
-# 🔹 Charge un paramètre spécifique depuis le fichier de configuration.
+# 🔹 Retourne la valeur d'un paramètre ("section/clé") ou sa valeur par défaut.
 func load_setting(key: String, default_value):
-	var section = key.get_slice("/", 0)
-	var property = key.get_slice("/", 1)
-	
-	var config = ConfigFile.new()
-	if config.load(SETTINGS_PATH) != OK:
-		return default_value
-	
-	return config.get_value(section, property, default_value)
+	return _get_settings().get_value(key.get_slice("/", 0), key.get_slice("/", 1), default_value)
 
-# 🔹 Met à jour un paramètre spécifique et sauvegarde immédiatement les options.
+# 🔹 Modifie un paramètre ("section/clé") et l'enregistre sur le disque.
 func update_setting(key: String, value):
-	var section = key.get_slice("/", 0)
-	var property = key.get_slice("/", 1)
-	
-	var config = ConfigFile.new()
-	config.load(SETTINGS_PATH)
-	config.set_value(section, property, value)
-	
-	DirAccess.make_dir_recursive_absolute("user://saves")
-	config.save(SETTINGS_PATH)
-	print("Paramètre '%s' mis à jour." % key)
+	_get_settings().set_value(key.get_slice("/", 0), key.get_slice("/", 1), value)
+	_write_settings()
+
+# 🔹 Retourne les paramètres en mémoire, en les lisant sur le disque au premier appel.
+func _get_settings() -> ConfigFile:
+	if _settings == null:
+		_settings = ConfigFile.new()
+		_settings.load(SETTINGS_PATH)
+	return _settings
+
+# 🔹 Écrit les paramètres en mémoire sur le disque.
+func _write_settings():
+	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+	_get_settings().save(SETTINGS_PATH)
+
+# 🔹 Indique si le jeu tourne sur un téléphone ou une tablette.
+func _is_mobile() -> bool:
+	return OS.has_feature("mobile")
 
 
-# ==============================================================================
-# 3. GESTION DES DONNÉES DE PROGRESSION
-# ==============================================================================
+# --- Données de Jeu ---
 
-# 🔹 Sauvegarde toutes les données de progression du joueur.
+# 🔹 Sauvegarde la partie de façon sûre (fichier temporaire, backup, puis remplacement).
 func save_game_data():
+	_save_pending = false
 	var config = ConfigFile.new()
 	config.set_value("Session", "last_timestamp", Time.get_unix_time_from_system())
-	
 	_save_player_stats(config)
 	_save_player_inventory(config)
 	_save_player_team(config)
@@ -108,37 +130,66 @@ func save_game_data():
 	_save_auto_delete_filters(config)
 	_save_index_status(config)
 	_save_discovered_types(config)
-	_save_player_stats(config)
-	
-	DirAccess.make_dir_recursive_absolute("user://saves")
-	config.save(GAME_DATA_PATH)
-	print("Données de jeu sauvegardées.")
-
-# 🔹 Charge toutes les données de progression du joueur.
-func load_game_data():
-	var config = ConfigFile.new()
-	if config.load(GAME_DATA_PATH) != OK:
-		print("Aucun fichier de sauvegarde de jeu trouvé. Démarrage d'une nouvelle partie.")
+	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+	if config.save(GAME_DATA_TEMP_PATH) != OK:
+		printerr("Sauvegarde impossible: écriture du fichier temporaire échouée.")
 		return
-	
+	if FileAccess.file_exists(GAME_DATA_PATH):
+		if FileAccess.file_exists(GAME_DATA_BACKUP_PATH):
+			DirAccess.remove_absolute(GAME_DATA_BACKUP_PATH)
+		DirAccess.rename_absolute(GAME_DATA_PATH, GAME_DATA_BACKUP_PATH)
+	if DirAccess.rename_absolute(GAME_DATA_TEMP_PATH, GAME_DATA_PATH) != OK:
+		printerr("Sauvegarde impossible: remplacement du fichier de sauvegarde échoué.")
+
+# 🔹 Charge la partie depuis le fichier principal, ou depuis le backup s'il est illisible.
+func load_game_data():
+	var config = _load_valid_game_config()
+	if config == null:
+		return
 	_load_player_stats(config)
-	_load_player_inventory(config)
-	_load_player_team(config)
-	_load_player_index(config)
 	_load_player_upgrades(config)
+	_load_player_inventory(config)
+	_load_player_index(config)
 	_load_auto_delete_filters(config)
 	_load_index_status(config)
 	_load_discovered_types(config)
-	
+	DataManager.ensure_default_structures()
 	DataManager.recalculate_stats_from_upgrades()
+	_load_player_team(config)
 	DataManager.inventory_updated.emit()
 	DataManager.total_pet_count_changed.emit(DataManager.player_inventory.size())
-	
-	print("Données de jeu chargées.")
+	DataManager.equipped_pets_changed.emit()
+
+# 🔹 Retourne l'horodatage de la dernière sauvegarde, ou 0 s'il n'y en a pas.
+func load_session_timestamp() -> int:
+	var config = _load_valid_game_config()
+	if config == null:
+		return 0
+	return int(config.get_value("Session", "last_timestamp", 0))
+
+# 🔹 Retourne le premier fichier de sauvegarde lisible (principal puis backup), ou null.
+func _load_valid_game_config() -> ConfigFile:
+	var main_exists = FileAccess.file_exists(GAME_DATA_PATH)
+	for path in [GAME_DATA_PATH, GAME_DATA_BACKUP_PATH]:
+		if not FileAccess.file_exists(path):
+			continue
+		var config = ConfigFile.new()
+		if config.load(path) == OK and config.has_section("PlayerData"):
+			return config
+	if main_exists:
+		printerr("Sauvegarde illisible: une copie est conservée dans ", GAME_DATA_CORRUPT_PATH)
+		DirAccess.copy_absolute(GAME_DATA_PATH, GAME_DATA_CORRUPT_PATH)
+	return null
+
+# 🔹 Exécute la sauvegarde différée si elle est toujours en attente.
+func _on_deferred_save_timeout():
+	if _save_pending:
+		save_game_data()
 
 
-# --- Fonctions d'Aide pour la Sauvegarde/Chargement de la Progression ---
+# --- Sections de Sauvegarde ---
 
+# 🔹 Écrit les monnaies et statistiques du joueur.
 func _save_player_stats(config: ConfigFile):
 	config.set_value("PlayerData", "coins", DataManager.coins)
 	config.set_value("PlayerData", "gems", DataManager.gems)
@@ -151,135 +202,133 @@ func _save_player_stats(config: ConfigFile):
 		config.set_value("PlayerData", "rarest_pet_name", DataManager.rarest_pet_ever_owned.base_name)
 		config.set_value("PlayerData", "rarest_pet_type", DataManager.rarest_pet_ever_owned.type.name)
 
-func _load_player_stats(config: ConfigFile):
-	DataManager.coins = config.get_value("PlayerData", "coins", 0.0)
-	DataManager.gems = config.get_value("PlayerData", "gems", 0)
-	DataManager.time_played = config.get_value("PlayerData", "time_played", 0)
-	DataManager.eggs_hatched = config.get_value("PlayerData", "eggs_hatched", 0)
-	DataManager.total_coins_earned = config.get_value("PlayerData", "total_coins_earned", 0.0)
-	DataManager.total_gems_earned = config.get_value("PlayerData", "total_gems_earned", 0)
-	DataManager.offline_hatch_target = config.get_value("PlayerData", "offline_hatch_target", "")
-	var rarest_name = config.get_value("PlayerData", "rarest_pet_name", "")
-	var rarest_type_name = config.get_value("PlayerData", "rarest_pet_type", "")
-	if not rarest_name.is_empty() and not rarest_type_name.is_empty():
-		var type_info_array = DataManager.PET_TYPES.filter(func(t): return t.name == rarest_type_name)
-		if not type_info_array.is_empty():
-			DataManager.rarest_pet_ever_owned = {
-				"base_name": rarest_name,
-				"type": type_info_array.front()
-				}
-
+# 🔹 Écrit la liste des pets possédés (identifiant, espèce, type).
 func _save_player_inventory(config: ConfigFile):
-	# Sauvegarde l'inventaire sous forme d'un seul tableau de dictionnaires.
 	var pet_data_array = []
 	for pet_instance in DataManager.player_inventory:
-		pet_data_array.append({
-			"uid": pet_instance.unique_id,
-			"name": pet_instance.base_name,
-			"type": pet_instance.type.name
-		})
+		pet_data_array.append({"uid": pet_instance.unique_id, "name": pet_instance.base_name, "type": pet_instance.type.name})
 	config.set_value("Inventory", "pets", pet_data_array)
 
-func _load_player_inventory(config: ConfigFile):
-	DataManager.player_inventory.clear()
-	var pet_data_array = config.get_value("Inventory", "pets", [])
-	var max_id = -1
-	
-	for pet_data in pet_data_array:
-		# Trouve la définition complète du type à partir de son nom.
-		var pet_type_info_array = DataManager.PET_TYPES.filter(func(t): return t.name == pet_data.type)
-		if pet_type_info_array.is_empty(): continue
-		var pet_type_info = pet_type_info_array.front()
-
-		var pet_instance = {
-			"unique_id": pet_data.uid,
-			"base_name": pet_data.name,
-			"type": pet_type_info,
-			"stats": DataManager.calculate_final_stats(pet_data.name, pet_type_info)
-		}
-		DataManager.player_inventory.append(pet_instance)
-		if pet_data.uid > max_id:
-			max_id = pet_data.uid
-	
-	DataManager.next_pet_unique_id = max_id + 1
-
+# 🔹 Écrit les identifiants des pets équipés.
 func _save_player_team(config: ConfigFile):
 	config.set_value("Team", "equipped_pets", DataManager.equipped_pets)
 
-func _load_player_team(config: ConfigFile):
-	var loaded_team = config.get_value("Team", "equipped_pets", [])
-	DataManager.equipped_pets.assign(loaded_team)
-
+# 🔹 Écrit les pets découverts dans l'index.
 func _save_player_index(config: ConfigFile):
 	config.set_value("Index", "discovered_pets", DataManager.discovered_pets)
 
-func _load_player_index(config: ConfigFile):
-	# Charge la donnée brute depuis le fichier.
-	var loaded_data = config.get_value("Index", "discovered_pets", {})
-	
-	# --- GESTION DE LA COMPATIBILITÉ ---
-	# Si la donnée chargée est un Array (ancien format), on l'ignore et on repart avec un dictionnaire vide.
-	if typeof(loaded_data) == TYPE_ARRAY:
-		print("Ancien format de sauvegarde pour 'discovered_pets' détecté. Réinitialisation de l'index.")
-		DataManager.discovered_pets = {}
-	# Si c'est bien un dictionnaire (nouveau format), on l'assigne.
-	elif typeof(loaded_data) == TYPE_DICTIONARY:
-		DataManager.discovered_pets = loaded_data
-	else:
-		# Sécurité supplémentaire au cas où la donnée est corrompue.
-		DataManager.discovered_pets = {}
-
+# 🔹 Écrit les niveaux des améliorations.
 func _save_player_upgrades(config: ConfigFile):
 	config.set_value("Upgrades", "levels", DataManager.upgrade_levels)
 
-func _load_player_upgrades(config: ConfigFile):
-	# 1. Définit la structure complète avec toutes les clés possibles et leurs valeurs par défaut.
-	var default_levels = {
-		"team_slots": 0,
-		"hatch_max": 0,
-		"permanent_luck": 0,
-		"offline_rewards": 0,
-		"offline_time_limit": 0
-	}
-	
-	# 2. Charge les niveaux depuis la sauvegarde (peut être un dictionnaire incomplet).
-	var loaded_levels = config.get_value("Upgrades", "levels", {})
-	
-	# 3. Fusionne les deux.
-	# On part des valeurs par défaut, et on écrase avec les valeurs chargées si elles existent.
-	for key in loaded_levels:
-		if default_levels.has(key):
-			default_levels[key] = loaded_levels[key]
-			
-	# 4. Assigne le dictionnaire complet et à jour à DataManager.
-	DataManager.upgrade_levels = default_levels
-
+# 🔹 Écrit les filtres d'auto-delete.
 func _save_auto_delete_filters(config: ConfigFile):
 	config.set_value("AutoDelete", "filters", DataManager.auto_delete_filters)
 
-func _load_auto_delete_filters(config: ConfigFile):
-	DataManager.auto_delete_filters = config.get_value("AutoDelete", "filters", {})
-
+# 🔹 Écrit l'état des récompenses d'index.
 func _save_index_status(config: ConfigFile):
 	config.set_value("Index", "status", DataManager.egg_index_status)
 
-func _load_index_status(config: ConfigFile):
-	DataManager.egg_index_status = config.get_value("Index", "status", {})
-
+# 🔹 Écrit la liste des types de pets déjà découverts.
 func _save_discovered_types(config: ConfigFile):
 	config.set_value("Index", "discovered_types", DataManager.discovered_pet_types)
 
+
+# --- Sections de Chargement ---
+
+# 🔹 Lit les monnaies et statistiques du joueur.
+func _load_player_stats(config: ConfigFile):
+	DataManager.coins = max(0.0, float(config.get_value("PlayerData", "coins", 0.0)))
+	DataManager.gems = maxi(0, int(config.get_value("PlayerData", "gems", 0)))
+	DataManager.time_played = int(config.get_value("PlayerData", "time_played", 0))
+	DataManager.eggs_hatched = int(config.get_value("PlayerData", "eggs_hatched", 0))
+	DataManager.total_coins_earned = float(config.get_value("PlayerData", "total_coins_earned", 0.0))
+	DataManager.total_gems_earned = int(config.get_value("PlayerData", "total_gems_earned", 0))
+	var offline_target = str(config.get_value("PlayerData", "offline_hatch_target", ""))
+	DataManager.offline_hatch_target = "" if GameConfig.get_egg_definition(offline_target).is_empty() else offline_target
+	var rarest_name = str(config.get_value("PlayerData", "rarest_pet_name", ""))
+	var rarest_type = GameConfig.get_type_by_name(str(config.get_value("PlayerData", "rarest_pet_type", "")))
+	DataManager.rarest_pet_ever_owned = {}
+	if GameConfig.PET_DEFINITIONS.has(rarest_name) and not rarest_type.is_empty():
+		DataManager.rarest_pet_ever_owned = {"base_name": rarest_name, "type": rarest_type}
+
+# 🔹 Lit les pets possédés en ignorant les entrées inconnues ou en double.
+func _load_player_inventory(config: ConfigFile):
+	var loaded_inventory: Array[Dictionary] = []
+	var seen_ids = {}
+	var max_id = -1
+	var pet_data_array = config.get_value("Inventory", "pets", [])
+	if typeof(pet_data_array) != TYPE_ARRAY:
+		pet_data_array = []
+	for pet_data in pet_data_array:
+		if typeof(pet_data) != TYPE_DICTIONARY or not pet_data.has("uid") or not pet_data.has("name") or not pet_data.has("type"):
+			continue
+		var pet_id = int(pet_data.uid)
+		var pet_name = str(pet_data.name)
+		var pet_type_info = GameConfig.get_type_by_name(str(pet_data.type))
+		if seen_ids.has(pet_id) or pet_type_info.is_empty() or not GameConfig.PET_DEFINITIONS.has(pet_name):
+			continue
+		seen_ids[pet_id] = true
+		loaded_inventory.append({
+			"unique_id": pet_id,
+			"base_name": pet_name,
+			"type": pet_type_info,
+			"stats": GameConfig.calculate_final_stats(pet_name, pet_type_info)
+		})
+		max_id = maxi(max_id, pet_id)
+	DataManager.player_inventory = loaded_inventory
+	DataManager.next_pet_unique_id = max_id + 1
+
+# 🔹 Lit l'équipe et retire les pets qui n'existent plus.
+func _load_player_team(config: ConfigFile):
+	var loaded_team = config.get_value("Team", "equipped_pets", [])
+	var team: Array[int] = []
+	if typeof(loaded_team) == TYPE_ARRAY or typeof(loaded_team) == TYPE_PACKED_INT64_ARRAY or typeof(loaded_team) == TYPE_PACKED_INT32_ARRAY:
+		for pet_id in loaded_team:
+			team.append(int(pet_id))
+	DataManager.equipped_pets = team
+	DataManager.sanitize_team()
+
+# 🔹 Lit les pets découverts dans l'index.
+func _load_player_index(config: ConfigFile):
+	var loaded_data = config.get_value("Index", "discovered_pets", {})
+	var discovered = {}
+	if typeof(loaded_data) == TYPE_DICTIONARY:
+		for pet_name in loaded_data:
+			if GameConfig.PET_DEFINITIONS.has(pet_name):
+				discovered[pet_name] = loaded_data[pet_name]
+	DataManager.discovered_pets = discovered
+
+# 🔹 Lit les niveaux des améliorations connues.
+func _load_player_upgrades(config: ConfigFile):
+	var levels = {}
+	for upgrade_id in GameConfig.GEM_UPGRADES:
+		levels[upgrade_id] = 0
+	var loaded_levels = config.get_value("Upgrades", "levels", {})
+	if typeof(loaded_levels) == TYPE_DICTIONARY:
+		for upgrade_id in loaded_levels:
+			if levels.has(upgrade_id):
+				levels[upgrade_id] = maxi(0, int(loaded_levels[upgrade_id]))
+	DataManager.upgrade_levels = levels
+
+# 🔹 Lit les filtres d'auto-delete.
+func _load_auto_delete_filters(config: ConfigFile):
+	var loaded_filters = config.get_value("AutoDelete", "filters", {})
+	DataManager.auto_delete_filters = loaded_filters if typeof(loaded_filters) == TYPE_DICTIONARY else {}
+
+# 🔹 Lit l'état des récompenses d'index.
+func _load_index_status(config: ConfigFile):
+	var loaded_status = config.get_value("Index", "status", {})
+	DataManager.egg_index_status = loaded_status if typeof(loaded_status) == TYPE_DICTIONARY else {}
+
+# 🔹 Lit la liste des types de pets déjà découverts.
 func _load_discovered_types(config: ConfigFile):
 	var loaded_types = config.get_value("Index", "discovered_types", ["Classic"])
-	DataManager.discovered_pet_types.assign(loaded_types)
-
-func load_session_timestamp() -> int:
-	var config = ConfigFile.new()
-	
-	if not FileAccess.file_exists(GAME_DATA_PATH):
-		return 0
-		
-	if config.load(GAME_DATA_PATH) != OK:
-		return 0
-	
-	return config.get_value("Session", "last_timestamp", 0)
+	var types: Array[String] = []
+	if typeof(loaded_types) == TYPE_ARRAY or typeof(loaded_types) == TYPE_PACKED_STRING_ARRAY:
+		for type_name in loaded_types:
+			if not str(type_name) in types:
+				types.append(str(type_name))
+	if not "Classic" in types:
+		types.append("Classic")
+	DataManager.discovered_pet_types = types

@@ -5,11 +5,12 @@ extends PanelContainer
 signal hatch_requested(egg_name, count)
 
 # --- Constantes ---
+const PetVisuals = preload("res://Scripts/PetVisuals.gd")
 const EGG_PANEL_SCENE = preload("res://Scenes/EggPanel.tscn")
 
 # --- Références aux Nœuds ---
 @onready var egg_list_container: VBoxContainer = %EggList
-@onready var auto_delete_menu = %AutoDeleteMenu # Référence au sous-menu
+@onready var auto_delete_menu = %AutoDeleteMenu
 
 # --- État ---
 var selected_egg_name: String = ""
@@ -20,29 +21,25 @@ var egg_panels: Array[PanelContainer] = []
 
 # 🔹 Construit ou reconstruit la liste des panneaux d'œufs disponibles.
 func setup(hatching_logic_node: Node):
-	# Nettoie les anciens panneaux.
-	for child in egg_list_container.get_children():
-		child.queue_free()
+	PetVisuals.clear_children(egg_list_container)
 	egg_panels.clear()
-
-	# Crée un panneau pour chaque œuf défini dans le DataManager.
-	for egg_def in DataManager.EGG_DEFINITIONS:
+	for egg_def in GameConfig.EGG_DEFINITIONS:
 		var panel = EGG_PANEL_SCENE.instantiate()
 		egg_list_container.add_child(panel)
 		panel.setup(egg_def, hatching_logic_node.NumberOfEggMax)
 		egg_panels.append(panel)
- 
-		# Connecte les signaux du panneau à ce gestionnaire.
 		panel.hatch_requested.connect(_on_panel_hatch_requested)
 		panel.select_requested.connect(_on_egg_selected)
 		panel.auto_delete_requested.connect(auto_delete_menu.open_for_egg)
 		panel.offline_target_requested.connect(_on_offline_target_requested)
-	
 	_update_all_offline_targets()
-	
-	# Sélectionne le premier œuf de la liste par défaut.
-	if not egg_panels.is_empty():
-		_on_egg_selected(egg_panels[0].egg_name)
+	if egg_panels.is_empty():
+		return
+	var egg_to_select = egg_panels[0].egg_name
+	for panel in egg_panels:
+		if panel.egg_name == selected_egg_name:
+			egg_to_select = selected_egg_name
+	_on_egg_selected(egg_to_select)
 
 # 🔹 Retourne le nom de l'œuf actuellement sélectionné.
 func get_selected_egg_name() -> String:
@@ -61,13 +58,12 @@ func _on_egg_selected(egg_name: String):
 	for panel in egg_panels:
 		panel.set_selected(panel.egg_name == selected_egg_name)
 
-# 🔹 Gère la définition d'une nouvelle cible pour l'éclosion hors ligne.
+# 🔹 Demande au backend de définir la cible de l'éclosion hors ligne.
 func _on_offline_target_requested(egg_name: String):
-	DataManager.set_offline_hatch_target(egg_name)
+	await Backend.set_offline_hatch_target(egg_name)
 	_update_all_offline_targets()
 
 # 🔹 Met à jour l'état visuel de tous les boutons de cible hors ligne.
 func _update_all_offline_targets():
-	var current_target = DataManager.offline_hatch_target
 	for panel in egg_panels:
-		panel.set_as_offline_target(panel.egg_name == current_target)
+		panel.set_as_offline_target(panel.egg_name == DataManager.offline_hatch_target)
